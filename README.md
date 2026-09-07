@@ -299,6 +299,41 @@ dotnet nuget add source ./nuget/local --name QtBridgeLocal
 At this point, the Qt Bridge and Qt packages are ready, and any projects referencing Qt Bridge for
 C# can be built successfully.
 
+#### Rebuilding the package
+
+When a change to the bridge appears to have no effect in a consuming project, check which package it
+actually resolved before looking for the fault in MSBuild:
+
+```text
+dotnet list package --include-prerelease
+```
+
+Find the Qt Bridge package in the output and check its **Resolved** version. Two separate things can
+leave you on an older build.
+
+**The version did not change.** A project uses the copy in the global NuGet cache
+(`~/.nuget/packages`). Rebuilding the bridge under the same version does not update that copy, so
+the project keeps the previous build, `.props` and `.targets` included. The bridge packaging target
+clears the cached entry when it publishes to `nuget/local`. If you copy a `.nupkg` into the feed by
+hand, remove the cached package folder, or clear the global packages cache before restoring:
+
+```text
+dotnet nuget locals global-packages --clear
+```
+
+This clears every cached package, so the next restore obtains them again.
+
+**The version changed but was not picked up.** A restore reuses `obj/project.assets.json` from the
+previous run, so a newly published version is not seen — which matters most with a floating version
+reference such as `0.3.*-*`. Force the resolution:
+
+```bash
+dotnet restore --force
+```
+
+`--force` re-resolves every dependency even when the assets file looks current, equivalent to
+deleting it.
+
 ## Running examples
 
 The **examples** directory contains simple projects implemented with Qt Bridge for C#. For instance,
@@ -439,6 +474,8 @@ See [Resources in Qt Bridge for C# apps](HOW-TO%20resources.md) for the resource
   - Windows: `set QTBRIDGE_TEST_ROOT=C:\temp`
   - Ubuntu / WSL: `export QTBRIDGE_TEST_ROOT=/tmp`
 - **WSL GUI**: Make sure GUI forwarding is available (WSLg or X server).
+- **Build fails with "An Application Control policy has blocked this file"**: See
+  [Smart App Control blocks a build](docs/troubleshooting.md#smart-app-control-blocks-a-build).
 
 ## What gets packaged
 
