@@ -22,6 +22,8 @@
     href: resources.md
 - name: Editing QML in Visual Studio
   href: visual-studio-workflow.md
+- name: Troubleshooting
+  href: troubleshooting.md
 - name: Release Status
   href: release-status.md
 - name: API Reference
