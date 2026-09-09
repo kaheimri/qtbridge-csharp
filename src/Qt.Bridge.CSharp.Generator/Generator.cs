@@ -39,6 +39,31 @@ namespace Qt.Bridge.CodeGeneration
             }
         }
 
+        internal static IEnumerable<string> DistinctByAssemblyIdentity(IEnumerable<string> paths)
+        {
+            var byIdentity = new Dictionary<string, string>();
+            var unidentifiable = new List<string>();
+            foreach (var path in paths) {
+                AssemblyName name;
+                try {
+                    name = AssemblyName.GetAssemblyName(path);
+                } catch (Exception ex) when (ex is BadImageFormatException or FileLoadException) {
+                    unidentifiable.Add(path);
+                    continue;
+                }
+
+                var identity = name.ToString();
+                if (!byIdentity.TryGetValue(identity, out var existing)) {
+                    byIdentity[identity] = path;
+                    continue;
+                }
+
+                if (File.GetLastWriteTimeUtc(path) > File.GetLastWriteTimeUtc(existing))
+                    byIdentity[identity] = path;
+            }
+            return byIdentity.Values.Concat(unidentifiable);
+        }
+
         private enum ExitCode
         {
             Ok,
@@ -150,10 +175,11 @@ namespace Qt.Bridge.CodeGeneration
                 return Error(ctx, ExitCode.SourceFileNotFound, $@"File not found: '{src}'");
 
             ctx.TryGetValue(Options.Ref, out string[] refs);
-            var assemblies = Directory.GetFiles(RuntimeEnvironment.GetRuntimeDirectory(), "*.dll")
+            var assemblies = DistinctByAssemblyIdentity(
+                Directory.GetFiles(RuntimeEnvironment.GetRuntimeDirectory(), "*.dll")
                 .Union(Directory.GetFiles(Environment.CurrentDirectory, "*.dll"))
                 .Union(Directory.GetFiles(srcFile.DirectoryName, "*.dll"))
-                .Union(ResolveRefAssemblies(refs))
+                .Union(ResolveRefAssemblies(refs)))
                 .ToArray();
 
             var loader = new MetadataLoadContext(new PathAssemblyResolver(assemblies));
