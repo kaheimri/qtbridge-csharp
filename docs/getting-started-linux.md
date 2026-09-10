@@ -49,11 +49,11 @@ item templates, see [Project Templates](templates-and-examples.md).
 For an existing Linux x64 project, add the Linux package:
 
 ```bash
-dotnet add package QtGroup.Qt.Bridge.CSharp.linux-x64 --version 0.3.*-*
+dotnet add package QtGroup.Qt.Bridge.CSharp.linux-x64 --version 0.4.*-*
 ```
 
 The package is platform-specific because the bridge includes native build/runtime pieces for the
-target platform. The `0.3.*-*` version range stays on the 0.3 pre-release train.
+target platform. The `0.4.*-*` version range stays on the 0.4 pre-release train.
 
 Then build with `QtDir`:
 

@@ -88,19 +88,19 @@ Qt 6 installation prefix before building.
 
 ```bash
 # Windows x64
-dotnet add package QtGroup.Qt.Bridge.CSharp.win-x64 --version 0.3.*-*
+dotnet add package QtGroup.Qt.Bridge.CSharp.win-x64 --version 0.4.*-*
 
 # Windows arm64
-dotnet add package QtGroup.Qt.Bridge.CSharp.win-arm64 --version 0.3.*-*
+dotnet add package QtGroup.Qt.Bridge.CSharp.win-arm64 --version 0.4.*-*
 
 # Linux x64 (Ubuntu / WSL)
-dotnet add package QtGroup.Qt.Bridge.CSharp.linux-x64 --version 0.3.*-*
+dotnet add package QtGroup.Qt.Bridge.CSharp.linux-x64 --version 0.4.*-*
 
 # macOS x64
-dotnet add package QtGroup.Qt.Bridge.CSharp.osx-x64 --version 0.3.*-*
+dotnet add package QtGroup.Qt.Bridge.CSharp.osx-x64 --version 0.4.*-*
 
 # macOS arm64 (Apple Silicon)
-dotnet add package QtGroup.Qt.Bridge.CSharp.osx-arm64 --version 0.3.*-*
+dotnet add package QtGroup.Qt.Bridge.CSharp.osx-arm64 --version 0.4.*-*
 ```
 
 Linux/macOS example:

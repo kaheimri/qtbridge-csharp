@@ -45,23 +45,23 @@ From your project folder, run:
 
 ```bash
 # Windows x64
-dotnet add package QtGroup.Qt.Bridge.CSharp.win-x64 --version 0.3.*-*
+dotnet add package QtGroup.Qt.Bridge.CSharp.win-x64 --version 0.4.*-*
 
 # Windows arm64
-dotnet add package QtGroup.Qt.Bridge.CSharp.win-arm64 --version 0.3.*-*
+dotnet add package QtGroup.Qt.Bridge.CSharp.win-arm64 --version 0.4.*-*
 
 # Linux
-dotnet add package QtGroup.Qt.Bridge.CSharp.linux-x64 --version 0.3.*-*
+dotnet add package QtGroup.Qt.Bridge.CSharp.linux-x64 --version 0.4.*-*
 
 # macOS x64
-dotnet add package QtGroup.Qt.Bridge.CSharp.osx-x64 --version 0.3.*-*
+dotnet add package QtGroup.Qt.Bridge.CSharp.osx-x64 --version 0.4.*-*
 
 # macOS arm64
-dotnet add package QtGroup.Qt.Bridge.CSharp.osx-arm64 --version 0.3.*-*
+dotnet add package QtGroup.Qt.Bridge.CSharp.osx-arm64 --version 0.4.*-*
 ```
 
 The package is platform-specific because the bridge includes a native integration layer for the
-target platform. The `0.3.*-*` version range stays on the 0.3 pre-release train.
+target platform. The `0.4.*-*` version range stays on the 0.4 pre-release train.
 
 ## Update the entry point
 
