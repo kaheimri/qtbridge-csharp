@@ -29,7 +29,9 @@ namespace Qt.Bridge.CodeGeneration
             , MainBeforeAppExec
             ,
         MetadataLoaderHeader,
-        MetadataLoaderSource
+        MetadataLoaderSource,
+        NativeHostHeader,
+        NativeHostSource
             ,
         HppFile
             , ForwardDecl

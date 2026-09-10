@@ -24,4 +24,10 @@
   <data name="MetadataLoaderSource,cpp/metadata_loader.cpp,SourceFiles" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>cpp\metadata_loader.cpp;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
+  <data name="NativeHostHeader,hpp/native_host.h,SourceFiles" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>hpp\native_host.h;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="NativeHostSource,cpp/native_host.cpp,SourceFiles" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>cpp\native_host.cpp;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
 </root>

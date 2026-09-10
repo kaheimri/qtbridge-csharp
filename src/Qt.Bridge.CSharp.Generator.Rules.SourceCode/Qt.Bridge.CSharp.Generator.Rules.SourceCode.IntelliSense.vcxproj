@@ -60,7 +60,11 @@
     <ClCompile Include="Static\cpp\metadata_loader.cpp">
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="Static\cpp\native_host.cpp">
+      <ExcludedFromBuild>true</ExcludedFromBuild>
+    </ClCompile>
     <ClInclude Include="Static\hpp\metadata_loader.h" />
+    <ClInclude Include="Static\hpp\native_host.h" />
     <ClInclude Include="Static\hpp\builtin_types.h" />
     <ClInclude Include="IntelliSense\include\QDotNetArray" />
     <ClInclude Include="IntelliSense\include\QDotNetConvert" />
