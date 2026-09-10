@@ -1,5 +1,56 @@
 # Change Log
 
+## Version 0.4.0 &ndash; Beta
+
+### Features
+
+* **Metadata-based type exports.** Qt Bridge can now describe exported managed types in a JSON
+  metadata file that is loaded by the native bridge at run time. This is an alternative to the
+  established source-code generation path, which remains the default.
+
+  - Select the export mode globally with the `QtExportAs` build property, or per assembly/type
+    with `Qt.Export` / `Qt.ExportAs`.
+
+  - The metadata schema and exporter currently cover properties, methods, events, indexers,
+    singleton types, models, and collection-as-model types.
+
+  - Metadata exports enable load-time type registration and dynamic-object dispatch. This work is
+    still under active development.
+
+* Add simplified `TreeModel` support for implementing tree views from C#, and extend the sample
+  Models and Views application with list, table, and tree examples.
+
+* Add Windows arm64 support and macOS x64/arm64 package and project-template support. As with
+  Linux, these packages use a compatible external Qt installation selected through `QtDir`.
+
+* Improve the build integration:
+
+  - Publish application, QML-resource, and QML build metadata for the Visual Studio QML Language
+    Server integration, including Fast Up-to-Date Check support.
+
+  - Add a packaged pre-built application host, more reliable incremental generation/cleanup, and
+    architecture-aware native builds.
+
+  - Support debug Qt deployment, with a release-runtime fallback when debug Qt binaries are not
+    available.
+
+* Add Visual Studio project/item template integration and a DocFX documentation site covering
+  project setup, existing projects, QML editing, resources, templates, and platform support.
+
+### Fixes and compatibility improvements
+
+* Improve cross-platform path, resource-alias, QRC, and QML metadata handling, including
+  deterministic handling of duplicate resource identities.
+
+* Improve native/managed interop reliability for string marshalling, null dynamic-object returns,
+  event notifications, metadata initialization, and safe-method caching.
+
+### Bug Fixes
+
+|#|Summary|
+|-|-|
+|[QTBRIDGES-330](https://qt-project.atlassian.net/browse/QTBRIDGES-330)|Fix memory leak of inbound string data buffers|
+
 ## Version 0.3.0 &ndash; Beta
 
 ### Features
