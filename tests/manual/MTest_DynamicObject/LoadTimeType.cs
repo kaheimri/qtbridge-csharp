@@ -3,6 +3,10 @@
 
 namespace MTest_DynamicObject
 {
+
+    [Qt.Export(Options = Qt.ExportAs.Metadata)]
+    public enum LoadTimeConsts { Foo = 41, Bar }
+
     [Qt.Export(Options = Qt.ExportAs.Metadata)]
     public class LoadTimeType : BuildTimeType
     {
@@ -21,5 +25,8 @@ namespace MTest_DynamicObject
         public override void QmlComponentComplete(object[] nestedElements)
         {
         }
+
+        public new LoadTimeConsts EnumFuncLoadTime(LoadTimeConsts x) => x;
+        public new BuildTimeConsts EnumFuncBuildTime(BuildTimeConsts x) => x;
     }
 }

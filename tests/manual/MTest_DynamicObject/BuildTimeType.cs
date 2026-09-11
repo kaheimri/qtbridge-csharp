@@ -8,6 +8,8 @@ using Qt.Quick;
 
 namespace MTest_DynamicObject
 {
+    public enum BuildTimeConsts { Foo = 21, Bar }
+
     public class BuildTimeType : Model, INotifyPropertyChanged, IQmlElement
     {
         public event PropertyChangedEventHandler PropertyChanged;
@@ -311,5 +313,8 @@ namespace MTest_DynamicObject
             }
             return true;
         }
+
+        public LoadTimeConsts EnumFuncLoadTime(LoadTimeConsts x) => x;
+        public BuildTimeConsts EnumFuncBuildTime(BuildTimeConsts x) => x;
     }
 }

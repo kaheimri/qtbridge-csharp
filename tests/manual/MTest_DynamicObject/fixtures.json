@@ -105,5 +105,19 @@
     {
         "name": "Cross-reference to lt",
         "expression": "target.loadTimeTypeObj.equals(lt)"
+    },
+    {
+        "name": "Build-time enumeration types",
+        "expression": [
+            "target.enumFuncBuildTime(BuildTimeConsts.Foo) === 21",
+            "target.enumFuncLoadTime(BuildTimeConsts.Bar) === 22"
+        ]
+    },
+    {
+        "name": "Load-time enumeration types",
+        "expression": [
+            "target.enumFuncBuildTime(LoadTimeConsts.Foo) === 41",
+            "target.enumFuncLoadTime(LoadTimeConsts.Bar) === 42"
+        ]
     }
 ]
