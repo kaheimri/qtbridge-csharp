@@ -214,6 +214,8 @@ namespace Qt.Bridge.CodeGeneration
             var rulesOk = await Rules.RunAllAsync(targetPath);
             foreach (var res in Rules.Results.Where(r => !r.Succeeded))
                 Error(res.Output);
+            foreach (var res in Rules.Results.Where(r => r.Warning))
+                Warning(res.Output);
             if (!rulesOk)
                 return Error(ctx, ExitCode.GenerationError, $@"Error running generation rules");
 

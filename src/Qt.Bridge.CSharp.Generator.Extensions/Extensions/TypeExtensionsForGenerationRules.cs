@@ -206,5 +206,31 @@ namespace Qt.Bridge.CodeGeneration.Extensions
             var ev = self.GetEvent("CollectionChanged");
             return ev != null && (ev.EventHandlerType?.FullName?.Contains(eventHandler) ?? false);
         }
+
+        public static List<(string Name, object Value)> EnumValues(this Type type)
+        {
+            if (type is not { IsEnum: true })
+                return null;
+            if (type.GetEnumNames() is not { Length: > 0 } names)
+                return null;
+            if (type.GetEnumValuesAsUnderlyingType() is not { Length: > 0 } values)
+                return null;
+            if (names.Length != values.Length)
+                return null;
+            try {
+                return [.. names
+                    .Select((x, i) => (Name: x, Value: values.GetValue(i)) switch
+                    {
+                        (_, sbyte or byte or short or ushort or int) e => e,
+                        (_, uint value) e when value <= int.MaxValue => e,
+                        (_, ulong value) e when value <= int.MaxValue => e,
+                        (_, long value) e when int.MinValue <= value && value <= int.MaxValue => e,
+                        (_, uint) or (_, ulong) or (_, long) => throw new OverflowException(),
+                        _ => throw new InvalidCastException()
+                    })];
+            } catch (Exception e) when (e is OverflowException or InvalidCastException) {
+                return null;
+            }
+        }
     }
 }

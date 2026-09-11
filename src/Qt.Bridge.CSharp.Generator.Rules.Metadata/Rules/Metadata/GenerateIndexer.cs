@@ -5,6 +5,7 @@ using System.Reflection;
 
 namespace Qt.Bridge.CodeGeneration.Rules.Metadata
 {
+    using System;
     using Extensions;
     using static Traits;
 
@@ -22,6 +23,12 @@ namespace Qt.Bridge.CodeGeneration.Rules.Metadata
                 return Error();
             if (type.GetPlaceholder(Placeholders.MetadataMethods) is not { } jsonMethods)
                 return Error();
+
+            var paramTypes = prop.GetIndexParameters()
+                .Select(p => p.ParameterType)
+                .Append(prop.PropertyType);
+            if (paramTypes.Any(t => !t.IsMetadataCompatible()))
+                return Warning($"Incompatible: {type.FullName} indexer; skipped");
 
             if (prop.GetMethod is { } getMethod)
                 GenerateMethod.Append(jsonMethods, getMethod, prop.MFn(Get));

@@ -6,11 +6,16 @@ using System.Reflection;
 namespace Qt.Bridge.CodeGeneration.Rules.Metadata
 {
     using Extensions;
+    using Utils.Collections.Concurrent;
     using static Placeholders;
     using static Traits;
 
     public class GenerateMethod : Rule
     {
+        internal static ConcurrentSet<MethodInfo> AmbiguousMethods { get; } = new();
+
+        public override void Reset() => AmbiguousMethods.Clear();
+
         internal static bool IsSupported(MethodInfo method)
             => !method.IsStatic && !method.ReflectedType.IsStaticClass();
 
@@ -22,6 +27,15 @@ namespace Qt.Bridge.CodeGeneration.Rules.Metadata
             if (src is not MethodInfo func)
                 return Error();
 
+            if (AmbiguousMethods.Contains(func))
+                return Warning($"Ambiguous: {func.DeclaringType.FullName}.{func}; skipped");
+
+            var paramTypes = func.GetParameters()
+                .Select(p => p.ParameterType)
+                .Append(func.ReturnType);
+            if (paramTypes.Any(t => !t.IsMetadataCompatible()))
+                return Warning($"Incompatible: {func.DeclaringType.FullName}.{func}; skipped");
+
             if (func.ReflectedType.GetPlaceholder(MetadataMethods) is not { } jsonFuncs)
                 return Error();
 
@@ -32,19 +46,10 @@ namespace Qt.Bridge.CodeGeneration.Rules.Metadata
         internal static void Append(Placeholder jsonFuncs, MethodInfo func, string qtName = null)
         {
 
-            var returnType = func.ReturnType switch
-            {
-                Type t when t.IsBuiltIn() => t,
-                _ => TypeOf<object>()
-            };
-
-            var argTypes = func.GetParameters()
-                ?.Select(p => p.ParameterType switch
-                {
-                    Type t when t.IsBuiltIn() => t,
-                    _ => TypeOf<object>()
-                })
-                ?.ToArray() ?? [];
+            var returnType = func.ReturnType.MetadataCompatibleType();
+            var argTypes = (func.GetParameters() ?? [])
+                .Select(p => p.ParameterType.MetadataCompatibleType())
+                .ToArray();
 
             Placeholder jsonFunc = null;
             jsonFuncs += $@"

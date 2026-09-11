@@ -309,11 +309,10 @@ namespace Qt.DotNet
         {
             Debug.Assert(method.GetParameters().Length == parameters.Length - 1);
             Debug.Assert(method.DeclaringType != null, "method.DeclaringType is null");
-            Debug.Assert(method.ReturnType.IsAssignableTo(parameters[0].GetParameterType())
-                || method.ReturnType.IsAssignableFrom(parameters[0].GetParameterType()));
-            Debug.Assert(method.GetParameters().Zip(parameters.Skip(1))
-                .All(x => x.First.ParameterType.IsAssignableTo(x.Second.GetParameterType())
-                    || x.First.ParameterType.IsAssignableFrom(x.Second.GetParameterType())));
+            Debug.Assert(parameters[0].GetParameterType().BindsTo(method.ReturnType));
+            Debug.Assert(method.GetParameters()
+                .Select((param, idx) => (Formal: param.ParameterType, Actual: parameters[idx + 1]))
+                .All(param => param.Formal.BindsTo(param.Actual.GetParameterType())));
 
             // Check if already in cache
             if (DelegateTypes.TryGetValue((method, parameters), out Type delegateType))

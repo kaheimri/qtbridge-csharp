@@ -18,6 +18,8 @@
 #include <QMetaType>
 #include <QtDebug>
 
+#include <cstdint>
+
 namespace {
 
 Q_DOTNET_PROFILE_SCOPE(MetaDataLoader);
@@ -223,6 +225,31 @@ bool loadCollectionModel(QMetaObjectBuilder *typeDef, const QJsonObject &jsonCol
             || warn("Error calling 'addCollectionModel'", jsonCollection);
 }
 
+bool loadEnum(QMetaObjectBuilder *typeDef, const QJsonObject &jsonEnum)
+{
+    Q_DOTNET_PROFILE_FUNC();
+
+    constexpr double minValue = INT32_MIN;
+    constexpr double maxValue = INT32_MAX;
+
+    auto values = typeDef->addEnumerator("Values");
+    for (auto it = jsonEnum.constKeyValueBegin(); it != jsonEnum.constKeyValueEnd(); ++it) {
+        if (it->second.isDouble()) {
+            if (double value = it->second.toDouble(); minValue <= value && value <= maxValue)
+                values.addKey(it->first.toString().toUtf8(), static_cast<qint32>(value));
+            else
+                warn("Enum value overflow", it->second);
+        } else {
+            warn("Enum value format", it->second);
+        }
+    }
+
+    if (!QDotNetDynamicObject::setEnum(typeDef, values))
+        return warn("Error setting enumerator", jsonEnum);
+
+    return true;
+}
+
 bool loadType(const QJsonObject &jsonType, const std::function<void()> &qmlRegisterTypes)
 {
     Q_DOTNET_PROFILE_FUNC();
@@ -275,6 +302,11 @@ bool loadType(const QJsonObject &jsonType, const std::function<void()> &qmlRegis
             if (!loadMethod(typeDef, jsonMethod.toObject()))
                 return false;
         }
+    }
+
+    if (const auto &jsonEnum = jsonType["qt"]["enum"]; jsonEnum.isObject()) {
+        if (!loadEnum(typeDef, jsonEnum.toObject()))
+            return false;
     }
 
     if (!jsonType["qt"]["qml"].isObject())

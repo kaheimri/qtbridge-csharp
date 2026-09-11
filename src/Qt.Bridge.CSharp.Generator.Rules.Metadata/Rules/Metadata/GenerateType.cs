@@ -6,6 +6,7 @@ using System.Reflection;
 namespace Qt.Bridge.CodeGeneration.Rules.Metadata
 {
     using Extensions;
+    using Qt.DotNet;
     using static Placeholders;
     using static Traits;
 
@@ -17,6 +18,9 @@ namespace Qt.Bridge.CodeGeneration.Rules.Metadata
         {
             if (src is not Type type || Root.GetPlaceholder(MetadataTypes) is not { } jsonTypes)
                 return Error();
+
+            if (type.IsEnum && !type.IsMetadataCompatible())
+                return Warning($"Incompatible: {type.FullName}; skipped");
 
             ////////////////////////////////////////////////////////////////////////////////////////
             //
@@ -55,8 +59,19 @@ namespace Qt.Bridge.CodeGeneration.Rules.Metadata
                 ]
             }]}
 }}";
-            if (type.IsQmlElement()) {
 
+            if (type.IsEnum) {
+                if (type.EnumValues() is not { Count: > 0 } enumValues)
+                    return Error();
+
+                qtInfo += $@"
+""enum"": {{
+    {string.Join(@",
+    ", enumValues.Select(x => $@"""{x.Name}"": {x.Value}"))}
+}}";
+            }
+
+            if (type.IsQmlElement() || type.IsEnum) {
                 qtInfo += $@"
 ""qml"": {{
     {qtInfo[new(QmlInfo, type)
@@ -108,6 +123,29 @@ namespace Qt.Bridge.CodeGeneration.Rules.Metadata
 ""methods"": [
     {jsonType[new(MetadataMethods, type) { Sorted = true, Separator = "," }]}
 ]";
+            }
+
+            ////////////////////////////////////////////////////////////////////////////////////////
+            //
+
+            var methods = SourceGraph.NodeSet<MethodInfo>()
+                .Where(m => m.ReflectedType == type);
+            foreach (var method in methods) {
+                if (method.IsHiddenBy(type))
+                    continue; // Method is hidden; ignore.
+                var paramTypes = method.GetParameters()
+                    .Select(p => p.ParameterType switch
+                    {
+                        { IsEnum: true } => TypeOf<int>(),
+                        _ => p.ParameterType
+                    })
+                    .ToArray();
+                if (paramTypes.Any(p => p == null))
+                    continue; // Method is incompatible; ignore.
+                var foundMethod = type.FindMethod(
+                    method.Name, BindingFlags.Public | BindingFlags.Instance, paramTypes, false);
+                if (foundMethod != method)
+                    GenerateMethod.AmbiguousMethods.Add(method);
             }
 
             return Ok;

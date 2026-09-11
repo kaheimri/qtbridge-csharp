@@ -212,6 +212,27 @@ public:
         return true;
     }
 
+    static bool setEnum(QMetaObjectBuilder *typeDef, const QMetaEnumBuilder &enumDef)
+    {
+        Q_DOTNET_PROFILE_FUNC();
+
+        if (!QCoreApplication::startingUp())
+            return false;
+
+        const auto &itDynamicType = dynamicTypesByDef.find(typeDef);
+        if (itDynamicType == dynamicTypesByDef.end()) {
+            qWarning() << "QDotNetDynamicObject: Unrecognized type definition:" << typeDef;
+            return false;
+        }
+
+        auto *type = *itDynamicType;
+        type->isEnum = true;
+        typeDef->addClassInfo("QML.Creatable", "false");
+        typeDef->addClassInfo("QML.UncreatableReason", "Type is an enum.");
+
+        return true;
+    }
+
     static bool addProperty(QMetaObjectBuilder *typeDef, const QString &propertyName,
                             const QMetaPropertyBuilder &propertyDef, QDotNetParameter getReturnType,
                             QDotNetParameter setValueType)
@@ -795,6 +816,9 @@ private:
         if (itDynamicType == dynamicTypesByDef.end())
             return;
         const auto *type = *itDynamicType;
+
+        if (type->isEnum)
+            return;
 
         auto *dynObj = static_cast<QDotNetDynamicObject *>(obj);
         if (!dynObj)
@@ -1524,6 +1548,7 @@ private:
         BaseClass baseClass = BaseClass::Object;
         ModelOverrides modelOverrides = ModelOverride::None;
         CollectionModel collectionModel;
+        bool isEnum = false;
         bool isQmlElement = false;
         QMap<int, DynamicMethod *> methods = {};
         QMap<int, DynamicProperty *> properties = {};

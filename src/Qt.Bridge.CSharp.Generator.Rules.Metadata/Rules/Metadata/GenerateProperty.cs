@@ -23,9 +23,10 @@ namespace Qt.Bridge.CodeGeneration.Rules.Metadata
             if (src is not PropertyInfo prop || prop.ReflectedType is not { } type)
                 return Error();
 
-            var exportType = prop.PropertyType;
-            if (!exportType.IsBuiltIn())
-                exportType = TypeOf<object>();
+            if (!prop.PropertyType.IsMetadataCompatible())
+                return Warning($"Incompatible: {type.FullName}.{prop}; skipped");
+
+            var exportType = prop.PropertyType.MetadataCompatibleType();
 
             ////////////////////////////////////////////////////////////////////////////////////////
             //

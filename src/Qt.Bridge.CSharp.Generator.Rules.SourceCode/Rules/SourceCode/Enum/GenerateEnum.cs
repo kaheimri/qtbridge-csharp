@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only
 
 using System.Reflection;
+using Qt.Bridge.CodeGeneration.Extensions;
 
 namespace Qt.Bridge.CodeGeneration.Rules.SourceCode.Enum
 {
@@ -26,19 +27,7 @@ namespace Qt.Bridge.CodeGeneration.Rules.SourceCode.Enum
                 return Error();
             if (names.Length != values.Length)
                 return Error();
-            var enumValues = names
-                .Select((x, i) => new { Name = x, Value = values.GetValue(i) })
-                .Where(x => x?.Value switch
-                {
-                    sbyte or byte or short or ushort or int => true,
-                    uint u32 => u32 <= int.MaxValue,
-                    ulong u64 => u64 <= int.MaxValue,
-                    long s64 => int.MinValue <= s64 && s64 <= int.MaxValue,
-                    _ => false
-                })
-                .Select(x => $"{x.Name.MFn(Enum)} = {x.Value}")
-                .ToList();
-            if (!enumValues.Any())
+            if (type.EnumValues() is not { Count: > 0 } enumValues)
                 return Error();
             if (type.GetEnumUnderlyingType() is not { } valuesType)
                 return Error();
@@ -63,7 +52,7 @@ public:
     enum Values
     {{
         {string.Join(@",
-        ", enumValues)}
+        ", enumValues.Select(x => $"{x.Name.MFn(Enum)} = {x.Value}"))}
     }};
     Q_ENUM(Values)
 }};

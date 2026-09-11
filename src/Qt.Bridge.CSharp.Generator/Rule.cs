@@ -30,6 +30,8 @@ namespace Qt.Bridge.CodeGeneration
             return Error();
         }
 
+        public virtual void Reset() { }
+
         protected const char Nul = Placeholder.Nul;
         protected const char BkSpc = Placeholder.BkSpc;
         protected const char Tab = Placeholder.Tab;
@@ -54,6 +56,7 @@ namespace Qt.Bridge.CodeGeneration
             public Rule Rule { get; set; }
             public string RuleName => Rule?.GetType().Name ?? "<Match>";
             public bool Succeeded { get; set; } = false;
+            public bool Warning { get; set; } = false;
             public string Message { get; set; } = null;
             public string ErrorFile { get; set; }
             public int ErrorLine { get; set; }
@@ -67,7 +70,8 @@ namespace Qt.Bridge.CodeGeneration
                     .Trim();
             }
             public string Output => $"{ErrorFile}({ErrorLine}): "
-                + $"error: Rule '{RuleName}({Source?.ToString() ?? "???"})'"
+                + $"{(Warning ? "warning" : "error")}: "
+                + $"Rule '{RuleName}({Source?.ToString() ?? "???"})'"
                 + (string.IsNullOrEmpty(Message) ? "" : ": " + Message);
         }
 
@@ -78,11 +82,27 @@ namespace Qt.Bridge.CodeGeneration
             return new Result { Rule = this, Message = msg, ErrorFile = file, ErrorLine = line };
         }
 
+        protected Result Warning(string msg,
+            [CallerFilePath] string file = "", [CallerLineNumber] int line = 0)
+        {
+            return new Result
+            {
+                Rule = this,
+                Message = msg,
+                ErrorFile = file,
+                ErrorLine = line,
+                Succeeded = true,
+                Warning = true
+            };
+        }
+
         internal static class All
         {
             internal static void Reset()
             {
                 SourceGraph = null;
+                foreach (var rule in AllRules)
+                    rule.Reset();
                 AllRules.Clear();
                 TargetDir = null;
                 Results.Clear();

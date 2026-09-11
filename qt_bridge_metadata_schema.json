@@ -142,6 +142,11 @@
                 "type": "boolean",
                 "description": "Is the type instantiable as an element in QML?"
               },
+              "enum": {
+                "type": "object",
+                "description": "Register as enum type",
+                "additionalProperties": { "type": "number" }
+              },
               "qml": {
                 "type": "object",
                 "description": "Expose type to QML",
