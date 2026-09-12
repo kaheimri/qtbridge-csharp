@@ -26,6 +26,13 @@
             "displayName": "Add sample code to project",
             "description": "Select this option to add sample code to the C# and QML source files."
         },
+        "ExportAsMetadata": {
+            "type": "parameter",
+            "datatype": "bool",
+            "defaultValue": "false",
+            "displayName": "Export types as metadata (experimental)",
+            "description": "Gnerate metadata instead of C++ source code for types exposed to QML."
+        },
         "Framework": {
             "type": "parameter",
             "datatype": "choice",

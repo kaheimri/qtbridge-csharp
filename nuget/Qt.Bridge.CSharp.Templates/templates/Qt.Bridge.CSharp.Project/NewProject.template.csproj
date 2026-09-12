@@ -26,6 +26,9 @@
     <QtBridgeTemplateRid Condition="'$(QtBridgeTemplateRid)' == '' and $([MSBuild]::IsOSPlatform('OSX'))"
       >osx-$(QtBridgeTemplateArch)</QtBridgeTemplateRid>
     <QtBridgePackageId>$(QtBridgePackagePrefix).$(QtBridgeTemplateRid)</QtBridgePackageId>
+<!--#if (ExportAsMetadata) -->
+    <QtExportAs>metadata</QtExportAs>
+<!--#endif -->
   </PropertyGroup>
 
   <ItemGroup Condition="'$(QtBridgeTemplateRid)' == 'win-x64'
