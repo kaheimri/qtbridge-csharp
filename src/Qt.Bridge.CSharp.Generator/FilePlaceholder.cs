@@ -5,6 +5,7 @@ global using Files = Qt.Bridge.CodeGeneration.FilePlaceholder.All;
 
 using System.Reflection;
 using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using Qt.Bridge.Utils.Collections.Concurrent;
 
@@ -17,6 +18,8 @@ namespace Qt.Bridge.CodeGeneration
         public bool ForceWrite { get; set; } = false;
         public bool ByteOrderMark { get; set; } = false;
         public string IndentChars { get; set; } = "    ";
+
+        public bool CompactJson { get; set; } = false;
 
         public FileInfo Target { get; private set; }
 
@@ -50,8 +53,24 @@ namespace Qt.Bridge.CodeGeneration
                 .TrimEnd('\r', '\n', ' ')
                 + (NewLineEof ? Environment.NewLine : "");
 
+            if (CompactJson)
+                text = ToCompactJson(text) + (NewLineEof ? Environment.NewLine : "");
+
             return await sink.WriteAsync(Target, text, Encoding, ForceWrite, cancelToken)
                 .ConfigureAwait(false);
+        }
+
+        private static string ToCompactJson(string text)
+        {
+            using var document = JsonDocument.Parse(text);
+            using var buffer = new MemoryStream();
+            using (var writer = new Utf8JsonWriter(buffer, new JsonWriterOptions {
+                Indented = false,
+                Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+            })) {
+                document.WriteTo(writer);
+            }
+            return Encoding.UTF8.GetString(buffer.ToArray());
         }
 
         private static ConcurrentSet<FilePlaceholder> Instances { get; } = new();

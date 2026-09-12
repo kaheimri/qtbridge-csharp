@@ -14,7 +14,8 @@ namespace Qt.Bridge.CodeGeneration.Rules.Metadata
         {
             var json = new FilePlaceholder(MetadataFile, Root, "qt_bridge_metadata.json")
             {
-                IndentChars = "  "
+                IndentChars = "  ",
+                CompactJson = true
             };
             json += $@"
 {{
