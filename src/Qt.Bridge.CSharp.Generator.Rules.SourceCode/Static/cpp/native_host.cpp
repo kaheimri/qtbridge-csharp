@@ -5,6 +5,17 @@
 
 #include <QByteArray>
 #include <QCryptographicHash>
+#include <QFile>
+#include <QFileInfo>
+#include <QString>
+
+#include <vector>
+
+#if defined(Q_OS_WIN)
+#  include <windows.h>
+#elif defined(Q_OS_MACOS)
+#  include <mach-o/dyld.h>
+#endif
 
 #include <cstddef>
 #include <cstdint>
@@ -196,6 +207,44 @@ namespace QtDotNet
     {
         const auto *manifest = validManifest();
         return manifest ? manifestName(manifest, AssemblyNameOffset, AssemblyNameSize) : nullptr;
+    }
+
+    // Metadata types must be registered while QCoreApplication::startingUp() is true, before a
+    // QGuiApplication exists. Obtain the host executable directory directly from the platform
+    // so that registration does not have to fall back to argv[0].
+    QString nativeHostApplicationDirPath()
+    {
+#if defined(Q_OS_WIN)
+        std::vector<wchar_t> path(MAX_PATH);
+        while (true) {
+            auto length = GetModuleFileNameW(nullptr, path.data(), static_cast<DWORD>(path.size()));
+            if (length == 0)
+                return { };
+
+            if (length < path.size()) {
+                return QFileInfo(QString::fromWCharArray(path.data(), static_cast<int>(length)))
+                        .absolutePath();
+            }
+            path.resize(path.size() * 2);
+        }
+#elif defined(Q_OS_MACOS)
+        uint32_t size = 0;
+        _NSGetExecutablePath(nullptr, &size);
+        if (size == 0)
+            return { };
+
+        std::vector<char> path(size);
+        if (_NSGetExecutablePath(path.data(), &size) != 0)
+            return { };
+        return QFileInfo(QString::fromUtf8(path.data(), static_cast<int>(size - 1))).absolutePath();
+#elif defined(Q_OS_LINUX)
+        QString exePath = QFile::symLinkTarget(QStringLiteral("/proc/self/exe"));
+        if (exePath.isEmpty())
+            return { };
+        return QFileInfo(exePath).absolutePath();
+#else
+        return { };
+#endif
     }
 
     bool nativeHostManifestIsValid()

@@ -4,9 +4,11 @@
 #pragma once
 
 #include <QByteArray>
+#include <QString>
 
 namespace QtDotNet {
     const char *nativeHostAssemblyName();
+    QString nativeHostApplicationDirPath();
 
     bool nativeHostManifestIsValid();
     bool nativeHostManifestIsPatched();

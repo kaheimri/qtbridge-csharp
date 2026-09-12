@@ -35,6 +35,7 @@ namespace Qt.Bridge.CodeGeneration.Rules.SourceCode
 "#include <QDir>",
 "#include <QFile>",
 "#include <QFileInfo>",
+"#include <QCoreApplication>",
 "#include <QGuiApplication>",
 "#include <QQmlApplicationEngine>",
 "#include <QQmlDebuggingEnabler>",
@@ -67,9 +68,15 @@ int main(int argc, char *argv[])
     }}
 
     QDotNetConvert::setDispatch(QtDotNet::objectDispatch);
-    auto appDirPath = QFileInfo(argv[0]).absoluteDir().path();
-    if (!QtDotNet::loadTypeMetadata(appDirPath, qml_register_types))
-        return -4;
+    {{
+        const auto nativeHostAppDirPath = QtDotNet::nativeHostApplicationDirPath();
+        if (nativeHostAppDirPath.isEmpty()) {{
+            qCritical() << ""Application directory not found."";
+            return -4;
+        }}
+        if (!QtDotNet::loadTypeMetadata(nativeHostAppDirPath, qml_register_types))
+            return -4;
+    }}
 
     {mainCpp[new(MainStartingUp) { Sorted = false }]}
 
@@ -81,6 +88,9 @@ int main(int argc, char *argv[])
     }}
 
     QGuiApplication app(argc, argv);
+
+    const auto appDirPath = QCoreApplication::applicationDirPath();
+
     auto assemblyPath = QDir(appDirPath).filePath(appName);
     if (!QFile::exists(assemblyPath)) {{
         qCritical() << ""App assembly not found: "" << assemblyPath;
