@@ -18,6 +18,8 @@
 #include <QDotNetStatic>
 #include <QDotNetConvert>
 
+#include <native_host.h>
+
 #include "object_dispatch.h"
 
 #define QTEST_MAIN_WITH_DOTNET_SETUP(TestObject)                           \
@@ -31,8 +33,6 @@
         QTEST_SET_MAIN_SOURCE_PATH                                         \
         return QTest::qExec(&tc, argc, argv);                              \
     }
-
-QT_DOTNET_HOST(appName);
 
 enum class BridgeExitCode
 {
@@ -75,6 +75,7 @@ protected:
 
     bool locateAssembly()
     {
+        const auto *appName = QtDotNet::nativeHostAssemblyName();
         if (!appName) {
             qCritical() << "Unpatched app host";
             return false;

@@ -49,12 +49,13 @@ namespace Qt.Bridge.CodeGeneration.Rules.SourceCode
 Q_DOTNET_PROFILER(main_profiler, ""qt_main_thread"");",
 "#include <object_dispatch.h>",
 "#include <metadata_loader.h>",
+"#include <native_host.h>",
 "#include <qml_register_types.h>"
                 }
             }
 ]}
 
-QT_DOTNET_HOST(appName);
+const char *appName = QtDotNet::nativeHostAssemblyName();
 
 int main(int argc, char *argv[])
 {{

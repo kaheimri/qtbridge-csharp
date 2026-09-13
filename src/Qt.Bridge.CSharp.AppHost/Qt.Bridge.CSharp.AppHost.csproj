@@ -36,6 +36,15 @@
   </ItemGroup>
 
   <PropertyGroup>
+    <!--
+      This project produces the packaged native host template. Its output must
+      ship with both markers unpatched, so that a consumer's build can find and
+      fill them in.
+    -->
+    <QtBridgeIsNativeHostTemplate>true</QtBridgeIsNativeHostTemplate>
+  </PropertyGroup>
+
+  <PropertyGroup>
     <PlatformTarget>AnyCPU</PlatformTarget>
     <AppendPlatformToOutputPath>false</AppendPlatformToOutputPath>
     <QtDotNetSolutionDir>$([System.IO.Path]::GetFullPath("$(MSBuildThisFileDirectory)../../"))</QtDotNetSolutionDir>
@@ -45,6 +54,11 @@
 
   <Import Project="..\..\build\Qt.Bridge.targets" />
 
+  <!--
+    Replaces the SDK target with a plain copy, deliberately. This project's
+    output is the template every other project patches, so it must never be
+    patched itself.
+  -->
   <Target Name="_CreateAppHost">
     <Copy SkipUnchangedFiles="true"
       SourceFiles="$(AppHostSourcePath)" DestinationFiles="$(AppHostIntermediatePath)" />

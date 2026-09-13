@@ -37,6 +37,10 @@
     AssemblyFile="$(QtBridgeBuildTasks)"
     TaskFactory="TaskHostFactory" />
 
+  <UsingTask TaskName="Qt.Bridge.CSharp.Build.Tasks.PatchNativeHostManifest"
+    AssemblyFile="$(QtBridgeBuildTasks)"
+    TaskFactory="TaskHostFactory" />
+
   <!--
   //////////////////////////////////////////////////////////////////////////////////////////////////
   // QtBridgeAddResources
@@ -467,6 +471,47 @@ namespace Qt.Qml
     </PropertyGroup>
   </Target>
   <!-- END QtBridgeBuild-->
+
+  <!--
+  //////////////////////////////////////////////////////////////////////////////////////////////////
+  // QtBridgePrepareAppHost
+  //
+  // Patches the native host template with the Qt Bridge manifest. Patches a
+  // private copy, never $(AppHostSourcePath) itself. On the prebuilt-host path
+  // that file lives in the package folder and is shared by every project and
+  // configuration on the machine.
+  //
+  // Deliberately not incremental. Skipping this target would also skip the
+  // AppHostSourcePath redirection, leaving the SDK to consume an unpatched
+  // template. The patch also supplies the SDK app-host marker, so the SDK can
+  // apply its normal managed-assembly patch and platform-specific finalisation.
+  -->
+  <Target Name="QtBridgePrepareAppHost"
+    BeforeTargets="_CreateAppHost;_CreateAppHostForPublish"
+    DependsOnTargets="QtBridgeBuild"
+    Condition="'$(QtBridgeIsNativeHostTemplate)' != 'true'
+      AND '$(DesignTimeBuild)' != 'true'
+      AND '$(AppHostSourcePath)' != '' AND Exists('$(AppHostSourcePath)')">
+
+    <PropertyGroup>
+      <!-- compute the path of the private, patched app-host template -->
+      <QtBridgePatchedAppHost
+      >$([System.IO.Path]::GetFullPath('$(IntermediateOutputPath)qt_apphost_patched$(_NativeExecutableExtension)'))</QtBridgePatchedAppHost>
+    </PropertyGroup>
+
+    <!-- copy the app-host template to the private, patched location -->
+    <Copy SourceFiles="$(AppHostSourcePath)" DestinationFiles="$(QtBridgePatchedAppHost)" />
+
+    <!-- patch the native host manifest into the app-host template -->
+    <PatchNativeHostManifest
+      HostPath="$(QtBridgePatchedAppHost)" AssemblyFileName="$(TargetFileName)" />
+
+    <!-- redirect the app-host source path to the patched version -->
+    <PropertyGroup>
+      <AppHostSourcePath>$(QtBridgePatchedAppHost)</AppHostSourcePath>
+    </PropertyGroup>
+  </Target>
+  <!-- END QtBridgePrepareAppHost-->
 
   <!--
   //////////////////////////////////////////////////////////////////////////////////////////////////
