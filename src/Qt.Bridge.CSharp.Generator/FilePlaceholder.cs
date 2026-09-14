@@ -20,6 +20,7 @@ namespace Qt.Bridge.CodeGeneration
         public string IndentChars { get; set; } = "    ";
 
         public bool CompactJson { get; set; } = false;
+        public Func<bool> WriteWhen { get; set; }
 
         public FileInfo Target { get; private set; }
 
@@ -83,7 +84,11 @@ namespace Qt.Bridge.CodeGeneration
 #if DEBUG
                 ArgumentNullException.ThrowIfNull(sink);
 #endif
-                var filePlaceholders = Instances.ToArray(); // snapshot
+                // Skipped placeholders are left out of the results entirely. A null result
+                // means  write failed, and --clean removes target files the results do not
+                // mention, which is what drops an artefact no longer generated.
+                var filePlaceholders = Instances
+                    .Where(x => x.WriteWhen?.Invoke() != false).ToArray(); // snapshot
                 var results = new (FileInfo File, bool? Updated)[filePlaceholders.Length];
 
                 await Task.WhenAll(Enumerable.Range(0, filePlaceholders.Length).Select(async i =>

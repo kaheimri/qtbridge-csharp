@@ -24,6 +24,8 @@ namespace Qt.Bridge.CodeGeneration
         public string Id { get; private set; }
         public MemberInfo Source { get; set; }
 
+        public bool IsEmpty => Text.Length == 0 && Children.IsEmpty;
+
         public IEnumerable<string> Content {
             init => value.ToList().ForEach(text => AddText(text));
         }

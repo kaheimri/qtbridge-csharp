@@ -317,9 +317,21 @@ namespace Qt.Qml
       <AppHostSourcePath>$(QtAppHost)</AppHostSourcePath>
     </PropertyGroup>
 
-    <Copy
-      SourceFiles="$(ProjectQtNativeRootDir)/$(QtBridgeMetadataFileName)"
-      DestinationFiles="$(ProjectDir)$(OutDir)$(QtBridgeMetadataFileName)" />
+    <!--
+      The generator omits the type metadata file when every type is registered from
+      generated C++. Remove a possible earlier metadata file to avoid leaving behind
+      a stale $(QtBridgeMetadataFileName) in the output directory.
+    -->
+    <PropertyGroup>
+      <QtBridgeGeneratedMetadata
+        >$(ProjectQtNativeRootDir)/$(QtBridgeMetadataFileName)</QtBridgeGeneratedMetadata>
+      <QtBridgeDeployedMetadata
+        >$(ProjectDir)$(OutDir)$(QtBridgeMetadataFileName)</QtBridgeDeployedMetadata>
+    </PropertyGroup>
+    <Copy Condition="Exists('$(QtBridgeGeneratedMetadata)')"
+      SourceFiles="$(QtBridgeGeneratedMetadata)"
+      DestinationFiles="$(QtBridgeDeployedMetadata)" />
+    <Delete Condition="!Exists('$(QtBridgeGeneratedMetadata)')" Files="$(QtBridgeDeployedMetadata)" />
 
   </Target>
   <!-- END QtBridgeGenerate-->

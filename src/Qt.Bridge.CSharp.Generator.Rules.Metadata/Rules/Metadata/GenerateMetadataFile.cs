@@ -20,14 +20,19 @@ namespace Qt.Bridge.CodeGeneration.Rules.Metadata
                 IndentChars = "  ",
                 CompactJson = true
             };
+
+            Placeholder types = null;
             json += $@"
 {{
   ""$schema"": ""https://code.qt.io/cgit/qt/qtbridge-csharp.git/plain/qt_bridge_metadata_schema.json"",
   ""types"": [
-{json[new(MetadataTypes) { Sorted = true, Separator = ",", Indent = 2 }]}
+{json[types = new(MetadataTypes) { Sorted = true, Separator = ",", Indent = 2 }]}
   ]
 }}
 ";
+
+            json.WriteWhen = () => !types.IsEmpty;
+
             return Ok;
         }
     }

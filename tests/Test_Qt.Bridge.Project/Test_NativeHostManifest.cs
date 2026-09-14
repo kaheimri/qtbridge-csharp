@@ -50,6 +50,9 @@ namespace Test_Qt.Bridge.Project
              }
          """;
 
+        private static readonly string SourceCode = Source.Replace(
+            "Qt.ExportAs.Metadata", "Qt.ExportAs.SourceCode");
+
         private static RunOptions RunOpts => new()
         {
             EnvVars = [("QT_FORCE_STDERR_LOGGING", "1")],
@@ -96,6 +99,42 @@ namespace Test_Qt.Bridge.Project
             Assert.AreNotEqual(0, corrupt.ExitCode, corrupt.StdOut);
             Assert.Contains("corrupt", corrupt.StdOut);
             Assert.DoesNotContain("Unpatched", corrupt.StdOut);
+        }
+
+        [TestMethod]
+        public async Task RebuildWithoutMetadataClearsHostManifest()
+        {
+            using var temp = new TempProject();
+            temp.Create(new() { PackageReferences = [Packages.QtBridge] });
+            temp.AddFile("Program.cs", Source);
+
+            var buildOptions = new BuildOptions
+            {
+                Properties = [("QtBridgeMetadataFileName", MetadataFileName)]
+            };
+            var firstBuild = await temp.BuildAsync(buildOptions);
+            Assert.IsTrue(firstBuild.Ok, firstBuild.Output);
+
+            var metadataPath = Path.Combine(temp.ExeDir, MetadataFileName);
+            Assert.IsTrue(File.Exists(metadataPath),
+                $"the first build deployed no type metadata: {metadataPath}");
+
+            temp.AddFile("Program.cs", SourceCode);
+            var secondBuild = await temp.BuildAsync(buildOptions);
+            temp.SaveLog();
+            Assert.IsTrue(secondBuild.Ok, secondBuild.Output);
+            Assert.IsFalse(File.Exists(metadataPath),
+                $"the second build left stale type metadata: {metadataPath}");
+
+            var executable = await File.ReadAllBytesAsync(temp.ExePath, Token);
+            var manifest = IndexOf(executable, ManifestHeader);
+            Assert.IsGreaterThanOrEqualTo(0, manifest, "no patched manifest header found");
+            Assert.AreEqual(0, executable[manifest + MetadataNameOffset],
+                "the host still contains a metadata file name");
+            for (var i = 0; i < Sha256ChecksumSize; ++i) {
+                Assert.AreEqual(0, executable[manifest + MetadataChecksumOffset + i],
+                    $"metadata checksum byte {i} was not cleared");
+            }
         }
 
         private static int IndexOf(byte[] source, byte[] pattern)
