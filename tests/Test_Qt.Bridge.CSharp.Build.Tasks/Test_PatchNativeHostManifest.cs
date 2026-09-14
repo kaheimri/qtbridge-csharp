@@ -1,8 +1,8 @@
 // Copyright (C) 2026 The Qt Company Ltd.
 // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR GPL-3.0-only
 
-using System.Text;
 using System.Collections;
+using System.Text;
 using Microsoft.Build.Framework;
 using Qt.Bridge.CSharp.Build.Tasks;
 
@@ -83,6 +83,37 @@ namespace Test_Qt.Bridge.CSharp.Build.Tasks
             // search pattern, so a longer assembly name relies on these for its terminator.
             for (var i = slot + SdkPlaceholder.Length; i < TemplateOffset + TemplateSize; ++i)
                 Assert.AreEqual(0, host[i], $"expected zero padding at {i}");
+        }
+
+        [TestMethod]
+        public void Crc32_MatchesTheCheckVector()
+        {
+            // This specifies the variant, not the call site. Since the native host
+            // recalculates the manifest's checksum using its own implementation, both
+            // must match.
+            var check = Encoding.ASCII.GetBytes("123456789");
+            Assert.AreEqual(0xcbf43926u, Crc32.Compute(check, 0, check.Length));
+        }
+
+        [TestMethod]
+        public void Execute_WritesTheV1PayloadChecksum()
+        {
+            var hostPath = WriteHost(CreateHost());
+
+            Assert.IsTrue(CreateTask(hostPath).Task.Execute());
+
+            var manifest = new byte[ManifestSize];
+            Array.Copy(File.ReadAllBytes(hostPath), TemplateOffset, manifest, 0, manifest.Length);
+
+            var written = (uint)(manifest[ManifestChecksumOffset]
+                | manifest[ManifestChecksumOffset + 1] << 8
+                | manifest[ManifestChecksumOffset + 2] << 16
+                | manifest[ManifestChecksumOffset + 3] << 24);
+            Assert.AreEqual(Crc32.Compute(manifest, 0, ManifestChecksumOffset), written);
+
+            // Everything from the end of the checksum to the end of the region is reserved.
+            for (var i = ManifestChecksumOffset + ManifestChecksumSize; i < ManifestSize; ++i)
+                Assert.AreEqual(0, manifest[i], $"expected reserved zero at {i}");
         }
 
         [TestMethod]

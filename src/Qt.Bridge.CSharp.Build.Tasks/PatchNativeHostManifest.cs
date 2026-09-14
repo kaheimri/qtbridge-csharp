@@ -35,8 +35,8 @@ namespace Qt.Bridge.CSharp.Build.Tasks
         private const int RccNameSize = 256;
         private const int RccChecksumOffset = 808;
 
-        private const int ManifestChecksumOffset = 840;
-        private const int ManifestChecksumSize = 4;
+        internal const int ManifestChecksumOffset = 840;
+        internal const int ManifestChecksumSize = 4;
         internal const int ManifestPayloadSize = 844;
 
         internal const string Marker = "QTBRIDGE_HOST_MANIFEST_V1__UNPATCHED__";
@@ -114,6 +114,12 @@ namespace Qt.Bridge.CSharp.Build.Tasks
             template[ManifestPayloadSizeOffset] = (byte)(ManifestPayloadSize & 0xff);
             template[ManifestPayloadSizeOffset + 1] = (byte)(ManifestPayloadSize >> 8);
             Buffer.BlockCopy(assemblyName, 0, template, AssemblyNameOffset, assemblyName.Length);
+
+            var checksum = Crc32.Compute(template, 0, ManifestChecksumOffset);
+            template[ManifestChecksumOffset] = (byte)checksum;
+            template[ManifestChecksumOffset + 1] = (byte)(checksum >> 8);
+            template[ManifestChecksumOffset + 2] = (byte)(checksum >> 16);
+            template[ManifestChecksumOffset + 3] = (byte)(checksum >> 24);
 
             // .NET SDK placeholder
             Buffer.BlockCopy(SdkPlaceholderBytes, 0, template, ManifestSize,
