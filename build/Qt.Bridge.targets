@@ -502,9 +502,16 @@ namespace Qt.Qml
     <!-- copy the app-host template to the private, patched location -->
     <Copy SourceFiles="$(AppHostSourcePath)" DestinationFiles="$(QtBridgePatchedAppHost)" />
 
+    <!-- the deployed type metadata -->
+    <PropertyGroup>
+      <QtBridgeMetadataFile>$(ProjectDir)$(OutDir)qt_bridge_metadata.json</QtBridgeMetadataFile>
+      <QtBridgeMetadataFile Condition="!Exists('$(QtBridgeMetadataFile)')" />
+    </PropertyGroup>
+
     <!-- patch the native host manifest into the app-host template -->
     <PatchNativeHostManifest
-      HostPath="$(QtBridgePatchedAppHost)" AssemblyFileName="$(TargetFileName)" />
+      HostPath="$(QtBridgePatchedAppHost)" AssemblyFileName="$(TargetFileName)"
+      MetadataFilePath="$(QtBridgeMetadataFile)" />
 
     <!-- redirect the app-host source path to the patched version -->
     <PropertyGroup>

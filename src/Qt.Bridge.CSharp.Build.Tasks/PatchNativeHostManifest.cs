@@ -1,6 +1,7 @@
 // Copyright (C) 2026 The Qt Company Ltd.
 // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only
 
+using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Build.Framework;
 
@@ -14,6 +15,8 @@ namespace Qt.Bridge.CSharp.Build.Tasks
     {
         internal const int ManifestSize = 1024;
         private const int SdkSlotSize = 1024;
+        internal const int Sha256ChecksumSize = 32;
+
         internal const int TemplateSize = ManifestSize + SdkSlotSize;
 
         // Field offsets from the start of the manifest region. Name fields are
@@ -27,11 +30,11 @@ namespace Qt.Bridge.CSharp.Build.Tasks
 
         // Note: explicitly omit the assembly checksum field
 
-        private const int MetadataNameOffset = 264;
+        internal const int MetadataNameOffset = 264;
         private const int MetadataNameSize = 256;
-        private const int MetadataChecksumOffset = 520;
+        internal const int MetadataChecksumOffset = 520;
 
-        private const int RccNameOffset = 552;
+        internal const int RccNameOffset = 552;
         private const int RccNameSize = 256;
         private const int RccChecksumOffset = 808;
 
@@ -55,6 +58,8 @@ namespace Qt.Bridge.CSharp.Build.Tasks
         [Required]
         public string AssemblyFileName { get; set; } = "";
 
+        public string MetadataFilePath { get; set; } = "";
+
         public override bool Execute()
         {
             if (!File.Exists(HostPath)) {
@@ -62,31 +67,46 @@ namespace Qt.Bridge.CSharp.Build.Tasks
                 return false;
             }
 
-            var assemblyName = Encoding.UTF8.GetBytes(AssemblyFileName);
-            switch (assemblyName.Length) {
-            case 0:
+            if (MetadataFilePath.Length > 0 && !File.Exists(MetadataFilePath)) {
+                Log.LogError($"Type metadata file not found: '{MetadataFilePath}'.");
+                return false;
+            }
+
+            if (AssemblyFileName.Length == 0) {
                 Log.LogError("Native host assembly file name must not be empty.");
                 return false;
-            case >= AssemblyNameSize:
-                Log.LogError($"Native host assembly file name must be shorter than "
-                    + $"{AssemblyNameSize} UTF-8 bytes.");
-                return false;
             }
 
-            if (Array.IndexOf(assemblyName, (byte)0) >= 0) {
-                Log.LogError("Native host assembly file name must not contain a NUL character.");
+            var assemblyName = EncodeName(AssemblyFileName, AssemblyNameSize, "assembly file name");
+            var metadataName = EncodeName(MetadataFilePath.Length == 0
+                ? "" : Path.GetFileName(MetadataFilePath), MetadataNameSize, "metadata file name");
+            if (assemblyName == null || metadataName == null)
                 return false;
-            }
 
             try {
-                return Patch(assemblyName);
+                return Patch(assemblyName, metadataName);
             } catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) {
                 Log.LogErrorFromException(ex, showStackTrace: false);
                 return false;
             }
         }
 
-        private bool Patch(byte[] assemblyName)
+        private byte[]? EncodeName(string value, int fieldSize, string field)
+        {
+            var name = Encoding.UTF8.GetBytes(value);
+            if (name.Length >= fieldSize) {
+                Log.LogError($"Native host {field} must be shorter than {fieldSize} UTF-8 bytes.");
+                return null;
+            }
+
+            if (Array.IndexOf(name, (byte)0) >= 0) {
+                Log.LogError($"Native host {field} must not contain a NUL character.");
+                return null;
+            }
+            return name;
+        }
+
+        private bool Patch(byte[] assemblyName, byte[] metadataName)
         {
             var hostBytes = File.ReadAllBytes(HostPath);
             var templateOffset = FindUniqueMarker(hostBytes);
@@ -115,6 +135,12 @@ namespace Qt.Bridge.CSharp.Build.Tasks
             template[ManifestPayloadSizeOffset + 1] = (byte)(ManifestPayloadSize >> 8);
             Buffer.BlockCopy(assemblyName, 0, template, AssemblyNameOffset, assemblyName.Length);
 
+            // A missing metadata file can leave its fields zero.
+            if (metadataName.Length > 0) {
+                Buffer.BlockCopy(metadataName, 0, template, MetadataNameOffset, metadataName.Length);
+                WriteSha256Checksum(MetadataFilePath, template, MetadataChecksumOffset);
+            }
+
             var checksum = Crc32.Compute(template, 0, ManifestChecksumOffset);
             template[ManifestChecksumOffset] = (byte)checksum;
             template[ManifestChecksumOffset + 1] = (byte)(checksum >> 8);
@@ -130,6 +156,13 @@ namespace Qt.Bridge.CSharp.Build.Tasks
             stream.Seek(templateOffset, SeekOrigin.Begin);
             stream.Write(template, 0, template.Length);
             return true;
+        }
+
+        private static void WriteSha256Checksum(string path, byte[] template, int offset)
+        {
+            using var sha256 = SHA256.Create();
+            using var stream = File.OpenRead(path);
+            Buffer.BlockCopy(sha256.ComputeHash(stream), 0, template, offset, Sha256ChecksumSize);
         }
 
         private int FindUniqueMarker(byte[] hostBytes)

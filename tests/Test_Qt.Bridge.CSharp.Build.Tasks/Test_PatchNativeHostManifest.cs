@@ -35,16 +35,38 @@ namespace Test_Qt.Bridge.CSharp.Build.Tasks
             return hostPath;
         }
 
-        private static (PatchNativeHostManifest Task, TestBuildEngine Engine) CreateTask(
-            string hostPath, string assemblyFileName = AssemblyName)
+        private string WriteFile(string fileName, string content)
+        {
+            Directory.CreateDirectory(TempDirectory);
+            var path = Path.Combine(TempDirectory, fileName);
+            File.WriteAllText(path, content);
+            return path;
+        }
+
+        private (PatchNativeHostManifest Task, TestBuildEngine Engine) CreateTask(
+            string hostPath, string assemblyFileName = AssemblyName, string metadataFilePath = "")
         {
             var engine = new TestBuildEngine();
             return (new PatchNativeHostManifest
             {
                 BuildEngine = engine,
                 HostPath = hostPath,
-                AssemblyFileName = assemblyFileName
+                AssemblyFileName = assemblyFileName,
+                MetadataFilePath = metadataFilePath
             }, engine);
+        }
+
+        private static byte[] Checksum(string path)
+        {
+            using var sha256 = System.Security.Cryptography.SHA256.Create();
+            return sha256.ComputeHash(File.ReadAllBytes(path));
+        }
+
+        private static byte[] Slice(byte[] host, int offset, int count)
+        {
+            var slice = new byte[count];
+            Array.Copy(host, TemplateOffset + offset, slice, 0, count);
+            return slice;
         }
 
         [TestMethod]
@@ -83,6 +105,46 @@ namespace Test_Qt.Bridge.CSharp.Build.Tasks
             // search pattern, so a longer assembly name relies on these for its terminator.
             for (var i = slot + SdkPlaceholder.Length; i < TemplateOffset + TemplateSize; ++i)
                 Assert.AreEqual(0, host[i], $"expected zero padding at {i}");
+        }
+
+        [TestMethod]
+        public void Execute_WritesTheMetadataFileNameAndChecksum()
+        {
+            var metadataPath = WriteFile("qt_bridge_metadata.json", "{\"types\":[]}");
+            var hostPath = WriteHost(CreateHost());
+
+            Assert.IsTrue(CreateTask(hostPath, metadataFilePath: metadataPath).Task.Execute());
+
+            var host = File.ReadAllBytes(hostPath);
+            const string name = "qt_bridge_metadata.json";
+            Assert.AreEqual(name, Encoding.UTF8.GetString(host, TemplateOffset + MetadataNameOffset,
+                name.Length));
+            Assert.AreEqual(0, host[TemplateOffset + MetadataNameOffset + name.Length]);
+            Assert.AreEqual(Convert.ToHexString(Checksum(metadataPath)),
+                Convert.ToHexString(Slice(host, MetadataChecksumOffset, Sha256ChecksumSize)));
+        }
+
+        [TestMethod]
+        public void Execute_LeavesTheMetadataSlotsZeroWhenThereIsNoMetadata()
+        {
+            var hostPath = WriteHost(CreateHost());
+
+            Assert.IsTrue(CreateTask(hostPath).Task.Execute());
+
+            var host = File.ReadAllBytes(hostPath);
+            for (var i = MetadataNameOffset; i < RccNameOffset; ++i)
+                Assert.AreEqual(0, host[TemplateOffset + i], $"expected zero at {i}");
+        }
+
+        [TestMethod]
+        public void Execute_FailsWhenTheMetadataFileDoesNotExist()
+        {
+            var (task, engine) = CreateTask(WriteHost(CreateHost()),
+                metadataFilePath: Path.Combine(TempDirectory, "does-not-exist.json"));
+
+            Assert.IsFalse(task.Execute());
+            Assert.HasCount(1, engine.Errors);
+            Assert.Contains("Type metadata file not found", engine.Errors[0].Message!);
         }
 
         [TestMethod]
