@@ -3,6 +3,8 @@
 
 #include <metadata_loader.h>
 
+#include <native_host.h>
+
 #include <QDotNetDynamicObject>
 #include <QDotNetProfiler>
 
@@ -354,6 +356,9 @@ bool validateMetadata(const QJsonDocument &metadata)
 bool QtDotNet::loadTypeMetadata(const QString &appDirPath, const std::function<void()> &qmlRegisterTypes)
 {
     Q_DOTNET_PROFILE_FUNC();
+
+    if (!QtDotNet::nativeHostManifestIsValid())
+        return warn("Application manifest is not valid");
 
     QFile metadataFile(QDir(appDirPath).filePath("qt_bridge_metadata.json"));
     if (!metadataFile.open(QIODevice::ReadOnly))

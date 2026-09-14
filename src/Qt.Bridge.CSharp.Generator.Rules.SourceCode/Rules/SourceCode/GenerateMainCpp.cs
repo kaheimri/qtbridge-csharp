@@ -60,7 +60,9 @@ const char *appName = QtDotNet::nativeHostAssemblyName();
 int main(int argc, char *argv[])
 {{
     if (!appName) {{
-        qCritical() << ""Unpatched app host"";
+        qCritical() << (QtDotNet::nativeHostManifestIsPatched()
+            ? ""The app host manifest is corrupt or is an unsupported version""
+            : ""Unpatched app host: this is a build template, not an application"");
         return -3;
     }}
 

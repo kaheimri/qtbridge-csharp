@@ -5,4 +5,7 @@
 
 namespace QtDotNet {
     const char *nativeHostAssemblyName();
+
+    bool nativeHostManifestIsValid();
+    bool nativeHostManifestIsPatched();
 }

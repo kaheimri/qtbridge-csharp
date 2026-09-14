@@ -4,6 +4,7 @@
 #include <native_host.h>
 
 #include <cstddef>
+#include <cstdint>
 
 // The following lines make sure the template byte array survives optimization and
 // linking, because the build task later needs to find it by scanning the finished
@@ -46,14 +47,20 @@ namespace
     // One object rather than two arrays, because the task addresses the second region by a
     // fixed offset from the first. Separate objects may be reordered, aligned apart, or placed
     // in different sections, which would make that offset meaningless.
-    constexpr std::size_t ManifestOffset = 0;
+    //
+    // Field offsets from the start of the manifest region. Name fields are 256 bytes. The
+    // metadata and .rcc names are followed by raw 32 byte SHA-256 checksum. The four-byte
+    // manifest checksum is part of the defined payload, but covers only the preceding bytes.
     constexpr std::size_t ManifestSize = 1024;
     constexpr std::size_t SdkSlotSize = 1024;
     constexpr std::size_t TemplateSize = ManifestSize + SdkSlotSize;
-    constexpr std::size_t ManifestPayloadSize = 844;
 
-    constexpr std::size_t AssemblyNameOffset = 8; // offset from the start
-    constexpr std::size_t AssemblyNameSize = 256; // maximum length of the field
+    constexpr std::size_t ManifestOffset = 0;
+    constexpr std::size_t AssemblyNameOffset = 8;
+    constexpr std::size_t AssemblyNameSize = 256;
+
+    constexpr std::size_t ChecksumOffset = 840;
+    constexpr std::size_t ManifestPayloadSize = 844;
 
     bool matches(const volatile unsigned char *value, const unsigned char *expected,
                  const std::size_t size)
@@ -65,16 +72,64 @@ namespace
         return true;
     }
 
-    // Magic bytes "QTBM" at offsets 0-3, format version 1 at offsets 4-5, and payload length
-    // 844 at offsets 6-7, all integer fields little-endian uint16.
-    bool isValidManifest(const volatile unsigned char *manifest)
+    std::uint32_t readUInt32(const volatile unsigned char *data)
+    {
+        return static_cast<std::uint32_t>(data[0])
+                | (static_cast<std::uint32_t>(data[1]) << 8)
+                | (static_cast<std::uint32_t>(data[2]) << 16)
+                | (static_cast<std::uint32_t>(data[3]) << 24);
+    }
+
+    // Modeled after the implementation in zlib, which is public domain.
+    //
+    // CRC-32 implementation with polynomial 0xedb88320, initial and final value 0xffffffff.
+    // The implementation needs to stay in sync with the implementation in Tasks Crc32.cs.
+    std::uint32_t crc32(const volatile unsigned char *data, const std::size_t size)
+    {
+        std::uint32_t crc = 0xffffffffu;
+        for (std::size_t i = 0; i < size; ++i) {
+            crc ^= data[i];
+            for (int bit = 0; bit < 8; ++bit)
+                crc = (crc & 1) ? (0xedb88320u ^ (crc >> 1)) : (crc >> 1);
+        }
+        return crc ^ 0xffffffffu;
+    }
+
+    // Distinguishes an unpatched template from a patched but invalid manifest.
+    bool isPatchedManifest(const volatile unsigned char *manifest)
     {
         // Signature for the Qt Bridge manifest: "QTBM" (Qt Bridge Manifest).
         constexpr unsigned char manifestMagic[] = { 'Q', 'T', 'B', 'M' };
-        return matches(manifest, manifestMagic, sizeof(manifestMagic)) && manifest[4] == 1
-                && manifest[5] == 0
-                && manifest[6] == (ManifestPayloadSize & 0xff)
-                && manifest[7] == (ManifestPayloadSize >> 8);
+        return matches(manifest, manifestMagic, sizeof(manifestMagic));
+    }
+
+    // Magic bytes "QTBM", version 1, and payload length 844 are followed by a checksum at
+    // offset 840.
+    bool isValidManifest(const volatile unsigned char *manifest)
+    {
+        if (!isPatchedManifest(manifest) || manifest[4] != 1
+            || manifest[5] != 0
+            || manifest[6] != (ManifestPayloadSize & 0xff)
+            || manifest[7] != (ManifestPayloadSize >> 8)) {
+            return false;
+        }
+        return readUInt32(manifest + ChecksumOffset) == crc32(manifest, ChecksumOffset);
+    }
+
+    // The NUL-terminated name held in a name field, or nullptr when the field is empty or has
+    // no terminator within its bounds. An empty field means the payload it describes is absent.
+    const char *manifestName(const volatile unsigned char *manifest, const std::size_t offset,
+                             const std::size_t size)
+    {
+        for (std::size_t i = 0; i < size; ++i) {
+            if (manifest[offset + i] == 0) {
+                return i == 0
+                    ? nullptr // empty field
+                    : const_cast<const char *>(reinterpret_cast<const volatile char *>(manifest
+                        + offset));  // null-terminated name
+            }
+        }
+        return nullptr;
     }
 }
 
@@ -113,24 +168,35 @@ QTB_RETAIN volatile unsigned char qtbNativeHostTemplate[TemplateSize] = {
 
 } // extern "C"
 
+namespace
+{
+    // The manifest region, or nullptr if the host is still unpatched or the manifest does not
+    // validate. Defined after the template because it refers to it. Only the manifest region
+    // is ever read, never the SDK field that follows it.
+    const volatile unsigned char *validManifest()
+    {
+        const volatile unsigned char *manifest = &qtbNativeHostTemplate[ManifestOffset];
+        return isValidManifest(manifest) ? manifest : nullptr;
+    }
+}
+
 namespace QtDotNet
 {
     // Returns the managed assembly file name or nullptr if the host is still unpatched or its
-    // manifest header is not valid. Only the manifest region is ever read, ignore the SDK slot.
+    // manifest is not valid.
     const char *nativeHostAssemblyName()
     {
-        const volatile unsigned char *manifest = &qtbNativeHostTemplate[ManifestOffset];
-        if (!isValidManifest(manifest))
-            return nullptr;
+        const auto *manifest = validManifest();
+        return manifest ? manifestName(manifest, AssemblyNameOffset, AssemblyNameSize) : nullptr;
+    }
 
-        for (std::size_t i = 0; i < AssemblyNameSize; ++i) {
-            if (manifest[AssemblyNameOffset + i] == 0) {
-                return i == 0
-                    ? nullptr // Empty name field -> invalid manifest
-                    : const_cast<const char *>(reinterpret_cast<const volatile char *>(manifest))
-                        + AssemblyNameOffset; // null-terminated assembly name
-            }
-        }
-        return nullptr;
+    bool nativeHostManifestIsValid()
+    {
+        return validManifest() != nullptr;
+    }
+
+    bool nativeHostManifestIsPatched()
+    {
+        return isPatchedManifest(&qtbNativeHostTemplate[ManifestOffset]);
     }
 }
