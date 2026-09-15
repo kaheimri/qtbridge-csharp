@@ -811,7 +811,7 @@ namespace Qt.Qml
     AfterTargets="CopyFilesToOutputDirectory" DependsOnTargets="QtBridgeBuild"
     Condition="'$(DesignTimeBuild)' != 'true' AND '$(QtGenSourceCode)' != 'true'
       AND ('$(QtHostIsLinux)' == 'true' OR '$(QtHostIsMacOS)' == 'true')">
-    <Warning Importance="high" Text="Qt Bridge: Warning: Deployment not supported." />
+    <Warning Text="Qt Bridge: Warning: Deployment not supported." />
     <!-- TODO: Add metadata-only deployment support -->
   </Target>
   <!-- QtBridgeDeploy : !GenSourceCode AND (HostIsLinux OR HostIsMacOS) -->
