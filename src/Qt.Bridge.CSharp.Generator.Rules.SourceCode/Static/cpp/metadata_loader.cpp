@@ -360,11 +360,19 @@ bool QtDotNet::loadTypeMetadata(const QString &appDirPath, const std::function<v
     if (!QtDotNet::nativeHostManifestIsValid())
         return warn("Application manifest is not valid");
 
-    QFile metadataFile(QDir(appDirPath).filePath("qt_bridge_metadata.json"));
+    // An empty name means the application ships no metadata, explicitly supported.
+    const auto *metadataName = QtDotNet::nativeHostMetadataName();
+    if (!metadataName)
+        return true;
+
+    QFile metadataFile(QDir(appDirPath).filePath(QString::fromUtf8(metadataName)));
     if (!metadataFile.open(QIODevice::ReadOnly))
         return warn("Error loading metadata file");
 
     auto metadataBytes = metadataFile.readAll();
+    if (!QtDotNet::nativeHostVerifyMetadata(metadataBytes))
+        return warn("Type metadata does not match the checksum in the application manifest");
+
     const auto &jsonMetadata = QJsonDocument::fromJson(metadataBytes);
     if (!validateMetadata(jsonMetadata))
         return false;

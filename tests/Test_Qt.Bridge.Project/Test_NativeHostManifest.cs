@@ -1,0 +1,108 @@
+// Copyright (C) 2026 The Qt Company Ltd.
+// SPDX-License-Identifier: LicenseRef-Qt-Commercial OR GPL-3.0-only
+
+using System.IO;
+using System.Threading;
+
+namespace Test_Qt.Bridge.Project
+{
+    using static Qt.Bridge.CSharp.Build.Tasks.PatchNativeHostManifest;
+
+    [TestClass]
+    public class Test_NativeHostManifest
+    {
+        public TestContext TestContext { get; set; }
+        private CancellationToken Token => TestContext.CancellationTokenSource.Token;
+
+        private static readonly byte[] ManifestHeader =
+            [(byte)'Q', (byte)'T', (byte)'B', (byte)'M', 1, 0,
+                ManifestPayloadSize & 0xff,
+                ManifestPayloadSize >> 8];
+
+        private const string Source = """
+             using Qt.Bridge.Models;
+             using Qt.Quick;
+
+             namespace ManifestManipulaton
+             {
+                 public sealed class Node(string name) : TreeNode<Node>
+                 {
+                     public string Name { get; } = name;
+                 }
+
+                 [QmlElement]
+                 [Qt.Export(Options = Qt.ExportAs.Metadata)]
+                 public sealed class MetadataTree : TreeModel<Node>
+                 {
+                     public MetadataTree() => AddRoot(new Node("root"));
+                 }
+
+                 internal class Program
+                 {
+                     static int Main(string[] args)
+                     {
+                         Console.WriteLine("started");
+                         return 0;
+                     }
+                 }
+             }
+         """;
+
+        private static RunOptions RunOpts => new()
+        {
+            EnvVars = [("QT_FORCE_STDERR_LOGGING", "1")],
+            StdErr = Redirect.StdOut
+        };
+
+        [TestMethod]
+        public async Task StartupRejectsAlteredDeployedBytes()
+        {
+            using var temp = new TempProject();
+            temp.Create(new() { PackageReferences = [Packages.QtBridge] });
+            temp.AddFile("Program.cs", Source);
+
+            var build = await temp.BuildAsync();
+            temp.SaveLog();
+            Assert.IsTrue(build.Ok, build.Output);
+
+            var metadataPath = Path.Combine(temp.ExeDir, "qt_bridge_metadata.json");
+            Assert.IsTrue(File.Exists(metadataPath),
+                $"the build deployed no type metadata to checksum: {metadataPath}");
+
+            var ok = await temp.RunAsync(RunOpts);
+            Assert.AreEqual(0, ok.ExitCode, ok.StdOut);
+            Assert.Contains("started", ok.StdOut);
+
+            var metadata = await File.ReadAllBytesAsync(metadataPath, Token);
+            var executable = await File.ReadAllBytesAsync(temp.ExePath, Token);
+
+            await File.WriteAllBytesAsync(metadataPath, [.. metadata, (byte)' '], Token);
+            var altered = await temp.RunAsync(RunOpts);
+            Assert.AreNotEqual(0, altered.ExitCode, altered.StdOut);
+            Assert.Contains("does not match the checksum", altered.StdOut);
+            await File.WriteAllBytesAsync(metadataPath, metadata, Token);
+
+            var manifest = IndexOf(executable, ManifestHeader);
+            Assert.IsGreaterThanOrEqualTo(0, manifest, "no patched manifest header found");
+            executable[manifest + ManifestChecksumOffset] ^= 0xff;
+            await File.WriteAllBytesAsync(temp.ExePath, executable, Token);
+
+            var corrupt = await temp.RunAsync(RunOpts);
+            Assert.AreNotEqual(0, corrupt.ExitCode, corrupt.StdOut);
+            Assert.Contains("corrupt", corrupt.StdOut);
+            Assert.DoesNotContain("Unpatched", corrupt.StdOut);
+        }
+
+        private static int IndexOf(byte[] source, byte[] pattern)
+        {
+            for (var i = 0; i <= source.Length - pattern.Length; ++i) {
+                var match = true;
+                for (var j = 0; match && j < pattern.Length; ++j)
+                    match = source[i + j] == pattern[j];
+                if (match)
+                    return i;
+            }
+            return -1;
+        }
+    }
+}

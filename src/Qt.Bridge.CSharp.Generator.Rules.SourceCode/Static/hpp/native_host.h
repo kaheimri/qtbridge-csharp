@@ -3,9 +3,14 @@
 
 #pragma once
 
+#include <QByteArray>
+
 namespace QtDotNet {
     const char *nativeHostAssemblyName();
 
     bool nativeHostManifestIsValid();
     bool nativeHostManifestIsPatched();
+
+    const char *nativeHostMetadataName();
+    bool nativeHostVerifyMetadata(const QByteArray &metadata);
 }

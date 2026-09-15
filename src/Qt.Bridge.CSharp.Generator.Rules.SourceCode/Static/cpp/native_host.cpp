@@ -3,6 +3,9 @@
 
 #include <native_host.h>
 
+#include <QByteArray>
+#include <QCryptographicHash>
+
 #include <cstddef>
 #include <cstdint>
 
@@ -58,6 +61,11 @@ namespace
     constexpr std::size_t ManifestOffset = 0;
     constexpr std::size_t AssemblyNameOffset = 8;
     constexpr std::size_t AssemblyNameSize = 256;
+
+    constexpr std::size_t MetadataNameOffset = 264;
+    constexpr std::size_t MetadataNameSize = 256;
+    constexpr std::size_t MetadataChecksumOffset = 520;
+    constexpr std::size_t Sha256ChecksumSize = 32;
 
     constexpr std::size_t ChecksumOffset = 840;
     constexpr std::size_t ManifestPayloadSize = 844;
@@ -198,5 +206,27 @@ namespace QtDotNet
     bool nativeHostManifestIsPatched()
     {
         return isPatchedManifest(&qtbNativeHostTemplate[ManifestOffset]);
+    }
+
+    // Returns the metadata file name, or nullptr when no metadata is shipped.
+    const char *nativeHostMetadataName()
+    {
+        const auto *manifest = validManifest();
+        return manifest ? manifestName(manifest, MetadataNameOffset, MetadataNameSize) : nullptr;
+    }
+
+    // Checks metadata bytes against the checksum recorded in the manifest.
+    bool nativeHostVerifyMetadata(const QByteArray &metadata)
+    {
+        const auto *manifest = validManifest();
+        if (!manifest)
+            return false;
+
+        const auto checksum = QCryptographicHash::hash(metadata, QCryptographicHash::Sha256);
+        if (checksum.size() != static_cast<int>(Sha256ChecksumSize))
+            return false;
+
+        return matches(manifest + MetadataChecksumOffset,
+            reinterpret_cast<const unsigned char *>(checksum.constData()), Sha256ChecksumSize);
     }
 }

@@ -68,7 +68,8 @@ int main(int argc, char *argv[])
 
     QDotNetConvert::setDispatch(QtDotNet::objectDispatch);
     auto appDirPath = QFileInfo(argv[0]).absoluteDir().path();
-    QtDotNet::loadTypeMetadata(appDirPath, qml_register_types);
+    if (!QtDotNet::loadTypeMetadata(appDirPath, qml_register_types))
+        return -4;
 
     {mainCpp[new(MainStartingUp) { Sorted = false }]}
 
