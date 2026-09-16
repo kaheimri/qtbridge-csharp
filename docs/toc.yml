@@ -24,6 +24,10 @@
   href: visual-studio-workflow.md
 - name: Troubleshooting
   href: troubleshooting.md
+- name: Tutorials
+  items:
+    - name: Create a C# and QML app
+      href: tutorial-csharp-qml-app.md
 - name: Release Status
   href: release-status.md
 - name: API Reference

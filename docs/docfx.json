@@ -28,6 +28,7 @@
           "getting-started-windows-cli-vscode.md",
           "getting-started-linux.md",
           "csharp-and-qml.md",
+          "tutorial-csharp-qml-app.md",
           "existing-csharp-projects.md",
           "resources.md",
           "templates-and-examples.md",
@@ -35,6 +36,11 @@
           "troubleshooting.md",
           "release-status.md"
         ]
+      }
+    ],
+    "resource": [
+      {
+        "files": [ "images/**" ]
       }
     ],
     "dest": "_site",
