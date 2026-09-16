@@ -881,6 +881,28 @@ namespace Qt.Qml
 
   <!--
   //////////////////////////////////////////////////////////////////////////////////////////////////
+  // QtBridgeFinalizeMetadataOnlyBuild
+  //
+  // In a "metadata-only" build, the QtBridgeBuild target does not run, which can leave certain
+  // post-conditions unsatisfied, such as up-to-date output files required for incremental build.
+  //
+  // TO-DO: Generate meaningful content for QML-LS configuration files.
+  //
+  -->
+  <Target Name="QtBridgeFinalizeMetadataOnlyBuild" AfterTargets="QtBridgeDeployResources"
+    Condition="'$(DesignTimeBuild)' != 'true' AND '$(QtGenSourceCode)' != 'true'">
+    <ItemGroup>
+      <QtBridgeFiles Include="$(ProjectDir)$(QtNativeBuildDir)/.qt/.qmlls.build.ini" />
+      <QtBridgeFiles Include="$(ProjectDir)$(QtNativeBuildDir)/.qt/qtbridge_project_sources.qrc" />
+      <QtBridgeFiles Include="$(ProjectDir)$(QtNativeBuildDir)/.qt/qtbridge-build.ready" />
+    </ItemGroup>
+    <MakeDir Directories="@(QtBridgeFiles->DirectoryName()->Distinct())" />
+    <Touch Files="@(QtBridgeFiles)" AlwaysCreate="true" />
+  </Target>
+  <!-- END QtBridgeFinalizeMetadataOnlyBuild -->
+
+  <!--
+  //////////////////////////////////////////////////////////////////////////////////////////////////
   // QtBridgeClean
   -->
   <Target Name="QtBridgeClean" AfterTargets="Clean">
