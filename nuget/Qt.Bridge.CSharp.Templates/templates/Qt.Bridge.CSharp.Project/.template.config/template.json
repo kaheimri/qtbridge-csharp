@@ -31,7 +31,7 @@
             "datatype": "bool",
             "defaultValue": "false",
             "displayName": "Export types as metadata (experimental)",
-            "description": "Gnerate metadata instead of C++ source code for types exposed to QML."
+            "description": "Generate metadata instead of C++ source code for types exposed to QML."
         },
         "Framework": {
             "type": "parameter",
