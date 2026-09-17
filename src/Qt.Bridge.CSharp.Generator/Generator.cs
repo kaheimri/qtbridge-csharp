@@ -113,7 +113,8 @@ namespace Qt.Bridge.CodeGeneration
 
         public enum Options
         {
-            Source, Ref, Exclude, Target, Rules, Clean, CleanIgnores, MetadataFileName
+            Source, Ref, Exclude, Target, Rules, Clean, CleanIgnores, MetadataFileName,
+            ResourcePackaging
         }
 
         private static RootCommand Command { get; }
@@ -160,6 +161,11 @@ namespace Qt.Bridge.CodeGeneration
                 Options.MetadataFileName, new Option<string>(
                     "--metadata-file-name", "Name of the generated type metadata file")
                 { Arity = ArgumentArity.ExactlyOne, ArgumentHelpName = "file-name" }
+            },
+            {
+                Options.ResourcePackaging, new Option<string>(
+                    "--resource-packaging", "Resource packaging backend (auto, linked or external)")
+                { Arity = ArgumentArity.ExactlyOne, ArgumentHelpName = "mode" }
             }
         };
 
@@ -188,6 +194,20 @@ namespace Qt.Bridge.CodeGeneration
                 GeneratorOptions.MetadataFileName = metadataFileName;
             }
 
+            ctx.TryGetValue(Options.ResourcePackaging, out string packaging);
+            ResourcePackaging? parsedPackaging = packaging?.ToLowerInvariant() switch
+            {
+                null => ResourcePackaging.Auto,
+                "auto" => ResourcePackaging.Auto,
+                "linked" => ResourcePackaging.Linked,
+                "external" => ResourcePackaging.External,
+                _ => null
+            };
+            if (parsedPackaging is not { } resourcePackaging) {
+                return Error(ctx, ExitCode.GenerationError, $"Invalid value '{packaging}' "
+                    + $"for --resource-packaging. Use 'Auto', 'Linked' or 'External'.");
+            }
+
             ctx.TryGetValue(Options.Ref, out string[] refs);
             var assemblies = DistinctByAssemblyIdentity(
                 Directory.GetFiles(RuntimeEnvironment.GetRuntimeDirectory(), "*.dll")
@@ -204,7 +224,8 @@ namespace Qt.Bridge.CodeGeneration
                 .Select(x => loader.CoreAssembly.GetType(x))
                 .Where(x => x != null);
 
-            await DependencyGraph.CreateAsync(loader, sourceAssembly, excludedTypes);
+            await DependencyGraph.CreateAsync(loader, sourceAssembly, excludedTypes,
+                resourcePackaging);
             if (Rules.SourceGraph == null)
                 return Error(ctx, ExitCode.GraphBuildError, "Graph build error");
 

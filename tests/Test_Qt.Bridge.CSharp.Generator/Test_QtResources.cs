@@ -71,7 +71,10 @@ namespace Test_Qt.Bridge.CSharp.Generator
         }
 
         [TestMethod]
-        public async Task DuplicateAlias_CrossAssembly_ReportsCollision()
+        [DataRow(Qt.Bridge.CodeGeneration.ResourcePackaging.Linked)]
+        [DataRow(Qt.Bridge.CodeGeneration.ResourcePackaging.External)]
+        public async Task DuplicateAlias_CrossAssembly_ReportsCollision(
+            Qt.Bridge.CodeGeneration.ResourcePackaging packaging)
         {
             const string libSource = """
             [assembly:Qt.Bridge.QtResource(
@@ -83,6 +86,7 @@ namespace Test_Qt.Bridge.CSharp.Generator
             """;
 
             const string appSource = """
+            [assembly: Qt.Export(Global = true, Options = Qt.ExportAs.Metadata)]
             [assembly:Qt.Bridge.QtResource(
                 SourcePath = @"C:\app\icons\close.svg",
                 Alias = "assemblies/Shared/icons/close.svg",
@@ -98,6 +102,7 @@ namespace Test_Qt.Bridge.CSharp.Generator
                 () => TestCodeGenerator.GenerateAsync([appSource],
                     sourceRefs: [apiAssembly],
                     referencesWithAliases: [("global", libPath)],
+                    resourcePackaging: packaging,
                     ct: TestContext.CancellationTokenSource.Token));
 
             Assert.Contains("assemblies/Shared/icons/close.svg", ex.Message);

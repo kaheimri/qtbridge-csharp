@@ -288,6 +288,7 @@ namespace Qt.Qml
         >$(QtGenCmd) --source "$(ProjectIntermediateDir)$(TargetFileName)"</QtGenCmd>
       <QtGenCmd
         >$(QtGenCmd) --target "$(ProjectQtNativeRootDir)"</QtGenCmd>
+      <QtGenCmd>$(QtGenCmd) --resource-packaging "$(QtResourcePackaging)"</QtGenCmd>
       <QtGenCmd
         >$(QtGenCmd) --metadata-file-name "$(QtBridgeMetadataFileName)"</QtGenCmd>
       <QtGenCmd
@@ -299,7 +300,8 @@ namespace Qt.Qml
     </PropertyGroup>
 
     <Message Importance="high" Text="$(QtGenCmd)" />
-    <Exec Command="$(QtGenCmd)" EchoOff="true" IgnoreExitCode="true">
+    <Exec Command="$(QtGenCmd)" EchoOff="true" IgnoreExitCode="true"
+          CustomErrorRegularExpression="^Qt Bridge: ERROR:">
       <Output TaskParameter="ExitCode" PropertyName="QtGenResult" />
     </Exec>
     <Error Condition="'$(QtGenResult)' != '0'" Text="Error generating native code!" />
@@ -349,6 +351,61 @@ namespace Qt.Qml
 
   </Target>
   <!-- END QtBridgeGenerate-->
+
+  <!-- Resource packaging runs after generation even when no native build is required. -->
+  <Target Name="QtBridgePackageResources" AfterTargets="QtBridgeGenerate"
+    DependsOnTargets="QtBridgeResolveResourcePack;QtBridgeCompileResourcePack;QtBridgeDeployResourcePack"
+    Condition="'$(DesignTimeBuild)' != 'true'" />
+
+  <Target Name="QtBridgeResolveResourcePack">
+    <PropertyGroup>
+      <_QtResourceQrc>$(ProjectQtNativeRootDir)/qt_bridge_resources.qrc</_QtResourceQrc>
+      <!-- Keep the binary under build/, which generator cleanup preserves. -->
+      <_QtResourcePack>$(_QtProjectNativeBuildDir)/$(QtBridgeResourcePackFileName)</_QtResourcePack>
+      <_QtDeployedResourcePack>$(TargetDir)$(QtBridgeResourcePackFileName)</_QtDeployedResourcePack>
+      <QtRccExecutable Condition="'$(QtRccExecutable)' == '' AND '$(QtHostIsWindows)' == 'true'"
+        >$(QtDir)/bin/rcc.exe</QtRccExecutable>
+      <QtRccExecutable Condition="'$(QtRccExecutable)' == '' AND Exists('$(QtDir)/libexec/rcc')"
+        >$(QtDir)/libexec/rcc</QtRccExecutable>
+      <QtRccExecutable Condition="'$(QtRccExecutable)' == ''">$(QtDir)/bin/rcc</QtRccExecutable>
+    </PropertyGroup>
+    <ItemGroup>
+      <_QtResourcePackInput Remove="@(_QtResourcePackInput)" />
+    </ItemGroup>
+    <XmlPeek Condition="Exists('$(_QtResourceQrc)')" XmlInputPath="$(_QtResourceQrc)"
+      Query="/RCC/qresource/file/text()">
+      <Output TaskParameter="Result" ItemName="_QtResourcePackInput" />
+    </XmlPeek>
+    <Error Condition="Exists('$(_QtResourceQrc)') AND !Exists('$(QtRccExecutable)')"
+      Text="Qt resource compiler not found: '$(QtRccExecutable)'. Set QtDir or QtRccExecutable to a host-compatible rcc." />
+    <Delete Condition="!Exists('$(_QtResourceQrc)')"
+      Files="$(_QtResourcePack);$(_QtDeployedResourcePack)" />
+    <ItemGroup Condition="Exists('$(_QtResourceQrc)')">
+      <FileWrites Include="$(_QtResourcePack);$(_QtDeployedResourcePack)" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="QtBridgeCompileResourcePack" Condition="Exists('$(_QtResourceQrc)')"
+    Inputs="$(_QtResourceQrc);@(_QtResourcePackInput);$(QtRccExecutable)"
+    Outputs="$(_QtResourcePack)">
+    <MakeDir Directories="$(_QtProjectNativeBuildDir)" />
+    <Exec Command="&quot;$(QtRccExecutable)&quot; --binary --output &quot;$(_QtResourcePack)&quot; &quot;$(_QtResourceQrc)&quot;" />
+  </Target>
+
+  <Target Name="QtBridgeDeployResourcePack" Condition="Exists('$(_QtResourceQrc)')">
+    <Copy SourceFiles="$(_QtResourcePack)" DestinationFiles="$(_QtDeployedResourcePack)"
+      SkipUnchangedFiles="true" />
+  </Target>
+
+  <Target Name="QtBridgePublishResourcePack" AfterTargets="ComputeFilesToPublish"
+    Condition="'$(DesignTimeBuild)' != 'true' AND Exists('$(TargetDir)$(QtBridgeResourcePackFileName)')">
+    <ItemGroup>
+      <ResolvedFileToPublish Include="$(TargetDir)$(QtBridgeResourcePackFileName)">
+        <RelativePath>$(QtBridgeResourcePackFileName)</RelativePath>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      </ResolvedFileToPublish>
+    </ItemGroup>
+  </Target>
 
   <!--
   //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1020,6 +1077,7 @@ namespace Qt.Qml
   // QtBridgeClean
   -->
   <Target Name="QtBridgeClean" AfterTargets="Clean">
+    <Delete Files="$(_QtProjectNativeBuildDir)/$(QtBridgeResourcePackFileName);$(TargetDir)$(QtBridgeResourcePackFileName)" />
     <RemoveDir Directories="$(IntermediateOutputPath)qt" />
     <ReadLinesFromFile Condition="Exists('$(TargetDir)qtdeploy.txt')"
       File="$(TargetDir)qtdeploy.txt">

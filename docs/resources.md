@@ -1,8 +1,8 @@
 # Application Resources
 
 Most applications need non-code files such as images, fonts, text, JSON, icons, and other content.
-In Qt Bridge for C# applications, you package those files into the Qt resource store and use
-`qrc:/` URLs to load them at runtime.
+In Qt Bridge for C# applications, you package those files for Qt and use `qrc:/` URLs to load them
+at runtime.
 
 The short version:
 
@@ -61,6 +61,27 @@ Use `<QtResource>` for files that QML, Qt, or C# code should read through `qrc:/
 
 You can include individual files or globs. Keep the default URL shape unless you are integrating
 with an existing Qt resource layout.
+
+## Choose resource packaging
+
+Set `QtResourcePackaging` to select how Qt resources are packaged:
+
+```xml
+<PropertyGroup>
+    <QtResourcePackaging>Linked</QtResourcePackaging>
+</PropertyGroup>
+```
+
+| Mode | Behavior |
+|---|---|
+| `Auto` (default) | Uses `Linked` when the project generates C++ type wrappers; otherwise uses `External`. |
+| `Linked` | Compiles resources into the native host. When there are resources to link, this requires a native C++ build. |
+| `External` | Builds and deploys a separate `qt_bridge_resources.rcc` resource pack. Creating the resource pack uses Qt's resource compiler, but does not by itself require C++ compilation. |
+
+`External` does not avoid a native build when the project has types exported as source code; those
+types still require generated C++ wrappers. A metadata-only project can create an external resource
+pack without a C++ toolchain. At runtime, resources in an external resource pack use the same
+`qrc:/` URLs as linked resources.
 
 ## Use resources from QML
 

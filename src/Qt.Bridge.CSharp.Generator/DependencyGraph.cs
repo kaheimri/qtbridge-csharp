@@ -28,9 +28,14 @@ namespace Qt.Bridge.CodeGeneration
         }
 
         public static async Task CreateAsync(
-            MetadataLoadContext loader, Assembly source, IEnumerable<Type> excludedTypes)
+            MetadataLoadContext loader,
+            Assembly source,
+            IEnumerable<Type> excludedTypes,
+            ResourcePackaging resourcePackaging = ResourcePackaging.Auto)
         {
-            Rules.SourceGraph = new DependencyGraph(loader);
+            Rules.SourceGraph = new DependencyGraph(loader) {
+                ResourcePackaging = resourcePackaging
+            };
             foreach (var excludedType in excludedTypes)
                 Rules.SourceGraph.ExcludedTypes.Add(excludedType);
             if (!await Rules.SourceGraph.BuildAsync(source))
@@ -40,6 +45,7 @@ namespace Qt.Bridge.CodeGeneration
         private ConcurrentDictionary<Type, ConcurrentSet<MemberInfo>> Nodes { get; } = new();
         private ConcurrentDictionary<Type, ConcurrentSet<Type>> Edges { get; } = new();
         public Type Root { get; private set; }
+        public ResourcePackaging ResourcePackaging { get; private set; }
 
         public IEnumerable<Type> Connected(Type fromType)
         {

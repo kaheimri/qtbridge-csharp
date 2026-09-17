@@ -11,22 +11,26 @@ namespace Qt.Bridge.CodeGeneration.Rules.SourceCode
 
     public class StatusFile : Rule
     {
-        public override int Priority => int.MinValue;
+        public override int Priority => int.MinValue + 1;
         public override bool Matches(MemberInfo src) => src.IsRootNode();
+
+        internal static IEnumerable<Type> NativeTypes => SourceGraph.NodeSet<Type>()
+            .Where(type => !type.IsRootNode() && type.ExportAsSourceCode()
+                && type.Assembly != TypeOf<TypeCast>()?.Assembly
+                && type.Assembly != TypeOf<Adapter>()?.Assembly);
 
         public override Result Execute(MemberInfo __)
         {
-            var typesToGenerate = SourceGraph?.NodeSet<Type>()
-                ?.Where(t => t.ExportAsSourceCode()
-                    && t.Assembly != TypeOf<TypeCast>()?.Assembly
-                    && t.Assembly != TypeOf<Adapter>()?.Assembly);
-            if (!typesToGenerate.Any())
+            var typesToGenerate = NativeTypes.ToArray();
+            var linkedResources = GenerateResources.Linked && GenerateResources.Resources.Count > 0;
+            if (typesToGenerate.Length == 0 && !linkedResources)
                 return Ok;
 
             _ = new FilePlaceholder(Status, Root, "source_code_status.txt")
             {
                 Sorted = true,
                 Content = typesToGenerate.Select(type => type.AssemblyQualifiedName)
+                    .Concat(linkedResources ? ["Linked resources"] : [])
             };
 
             return Ok;
