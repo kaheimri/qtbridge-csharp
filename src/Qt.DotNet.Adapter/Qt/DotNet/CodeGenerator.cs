@@ -309,7 +309,18 @@ namespace Qt.DotNet
         {
             Debug.Assert(method.GetParameters().Length == parameters.Length - 1);
             Debug.Assert(method.DeclaringType != null, "method.DeclaringType is null");
-            Debug.Assert(parameters[0].GetParameterType().BindsTo(method.ReturnType));
+            var returnTypeCompatible = parameters[0].GetParameterType().BindsTo(method.ReturnType)
+                || (parameters[0].MarshalAs == Parameter.ObjectRef
+                    && method.ReturnType.IsGenericType
+                    && method.ReturnType.GetGenericTypeDefinition() == typeof(SafeReturn<>))
+                // Safe calls preserve reference returns in SafeReturn<object>. The native
+                // signature retains the requested reference type for its marshaler.
+                || (method.Name == $"get_{nameof(SafeReturn<object>.Value)}"
+                    && method.ReturnType == typeof(object)
+                    && method.DeclaringType?.IsGenericType == true
+                    && method.DeclaringType.GetGenericTypeDefinition() == typeof(SafeReturn<>)
+                    && !parameters[0].GetParameterType().IsValueType);
+            Debug.Assert(returnTypeCompatible);
             Debug.Assert(method.GetParameters()
                 .Select((param, idx) => (Formal: param.ParameterType, Actual: parameters[idx + 1]))
                 .All(param => param.Formal.BindsTo(param.Actual.GetParameterType())));
