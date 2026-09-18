@@ -110,16 +110,17 @@ namespace Test_Qt.Bridge.CSharp.Build.Tasks
         [TestMethod]
         public void Execute_WritesTheMetadataFileNameAndChecksum()
         {
-            var metadataPath = WriteFile("qt_bridge_metadata.json", "{\"types\":[]}");
+            const string metadataFileName = "qt_bridge_metadata_dummy_name.json";
+
+            var metadataPath = WriteFile(metadataFileName, "{\"types\":[]}");
             var hostPath = WriteHost(CreateHost());
 
             Assert.IsTrue(CreateTask(hostPath, metadataFilePath: metadataPath).Task.Execute());
 
             var host = File.ReadAllBytes(hostPath);
-            const string name = "qt_bridge_metadata.json";
-            Assert.AreEqual(name, Encoding.UTF8.GetString(host, TemplateOffset + MetadataNameOffset,
-                name.Length));
-            Assert.AreEqual(0, host[TemplateOffset + MetadataNameOffset + name.Length]);
+            Assert.AreEqual(metadataFileName, Encoding.UTF8.GetString(host,
+                TemplateOffset + MetadataNameOffset, metadataFileName.Length));
+            Assert.AreEqual(0, host[TemplateOffset + MetadataNameOffset + metadataFileName.Length]);
             Assert.AreEqual(Convert.ToHexString(Checksum(metadataPath)),
                 Convert.ToHexString(Slice(host, MetadataChecksumOffset, Sha256ChecksumSize)));
         }

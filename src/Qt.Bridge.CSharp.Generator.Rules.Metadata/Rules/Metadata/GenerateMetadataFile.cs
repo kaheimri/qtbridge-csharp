@@ -12,7 +12,10 @@ namespace Qt.Bridge.CodeGeneration.Rules.Metadata
         public override bool Matches(MemberInfo src) => src.IsRootNode();
         public override Result Execute(MemberInfo _)
         {
-            var json = new FilePlaceholder(MetadataFile, Root, "qt_bridge_metadata.json")
+            if (string.IsNullOrEmpty(GeneratorOptions.MetadataFileName))
+                return Error("Type metadata file name is not configured");
+
+            var json = new FilePlaceholder(MetadataFile, Root, GeneratorOptions.MetadataFileName)
             {
                 IndentChars = "  ",
                 CompactJson = true

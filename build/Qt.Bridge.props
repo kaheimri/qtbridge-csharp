@@ -46,6 +46,9 @@
     <QtDotNetGenMetaFunctions Condition="!Exists('$(QtDotNetGenMetaFunctions)') AND '$(QtDotNetSolutionDir)' != ''"
       >$(QtDotNetSolutionDir)src/Qt.Bridge.CSharp.Generator.MetaFunctions/bin/$(Configuration)/$(TargetFramework)/Qt.Bridge.CSharp.Generator.MetaFunctions.dll</QtDotNetGenMetaFunctions>
 
+    <QtBridgeMetadataFileName Condition="'$(QtBridgeMetadataFileName)' == ''"
+      >qt_bridge_metadata.json</QtBridgeMetadataFileName>
+
     <QtDotNetAdapter>$(MSBuildThisFileDirectory)Qt.DotNet.Adapter.dll</QtDotNetAdapter>
     <QtDotNetAdapter Condition="!Exists('$(QtDotNetAdapter)') AND '$(QtDotNetSolutionDir)' != ''"
       >$(QtDotNetSolutionDir)src/Qt.DotNet.Adapter/bin/$(Configuration)/$(TargetFramework)/Qt.DotNet.Adapter.dll</QtDotNetAdapter>

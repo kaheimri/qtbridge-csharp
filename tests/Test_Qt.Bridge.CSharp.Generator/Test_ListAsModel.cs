@@ -67,7 +67,7 @@ namespace Test_Qt.Bridge.CSharp.Generator
                 [typeof(Qt.ExportAttribute).Assembly,
                  typeof(Qt.Bridge.CodeGeneration.Rules.Metadata.GenerateType).Assembly],
                 ct: TestContext.CancellationTokenSource.Token);
-            var types = JsonNode.Parse(result.Sink.Files["qt_bridge_metadata.json"])!["types"]!
+            var types = JsonNode.Parse(result.Sink.Files[TestCodeGenerator.MetadataFileName])!["types"]!
                 .AsArray();
             var model = types.Single(type => type!["dotNet"]!["name"]!.GetValue<string>()
                 == "Test.People")!["qt"]!["model"]!;
@@ -95,7 +95,7 @@ namespace Test_Qt.Bridge.CSharp.Generator
                  typeof(System.Collections.ObjectModel.ObservableCollection<>).Assembly,
                  typeof(Qt.Bridge.CodeGeneration.Rules.Metadata.GenerateType).Assembly],
                 ct: TestContext.CancellationTokenSource.Token);
-            var types = JsonNode.Parse(result.Sink.Files["qt_bridge_metadata.json"])!["types"]!
+            var types = JsonNode.Parse(result.Sink.Files[TestCodeGenerator.MetadataFileName])!["types"]!
                 .AsArray();
             var collection = types.Single(type => type!["dotNet"]!["name"]!.GetValue<string>()
                 == "Test.People")!["qt"]!["model"]!["collection"]!;

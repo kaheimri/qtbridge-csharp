@@ -29,6 +29,8 @@ namespace Test_Qt.Bridge.CSharp.Generator.Support
     /// </summary>
     public static class TestCodeGenerator
     {
+        public const string MetadataFileName = "qt_bridge_metadata_dummy_name.json";
+
         private static readonly string NewLine = Environment.NewLine;
         private static readonly ConcurrentDictionary<string, byte> TempArtifacts = new();
         private static readonly ConcurrentDictionary<MetadataLoadContext, byte> LoadContexts = new();
@@ -92,6 +94,7 @@ namespace Test_Qt.Bridge.CSharp.Generator.Support
             Placeholder.ResetIndex();
             Rules.Reset();
             FilePlaceholder.All.Reset();
+            GeneratorOptions.MetadataFileName = MetadataFileName;
 
             // Build up necessary dependencies infrastructure
             var refs = CreateDefaultFrameworkPaths()

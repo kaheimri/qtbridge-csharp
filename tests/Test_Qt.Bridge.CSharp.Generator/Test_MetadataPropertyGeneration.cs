@@ -47,7 +47,7 @@ namespace Test_Qt.Bridge.CSharp.Generator
                 ],
                 ct: TestContext.CancellationTokenSource.Token);
 
-            Assert.IsTrue(result.Sink.Files.TryGetValue("qt_bridge_metadata.json", out var json),
+            Assert.IsTrue(result.Sink.Files.TryGetValue(TestCodeGenerator.MetadataFileName, out var json),
                 string.Join(", ", result.Sink.Files.Keys));
             var types = JsonNode.Parse(json)!["types"]!.AsArray();
 

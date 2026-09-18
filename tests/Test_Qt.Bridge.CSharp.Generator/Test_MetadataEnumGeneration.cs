@@ -46,7 +46,7 @@ namespace Test_Qt.Bridge.CSharp.Generator
                 ],
                 ct: TestContext.CancellationTokenSource.Token);
 
-            Assert.IsTrue(result.Sink.Files.TryGetValue("qt_bridge_metadata.json", out var json),
+            Assert.IsTrue(result.Sink.Files.TryGetValue(TestCodeGenerator.MetadataFileName, out var json),
                 string.Join(", ", result.Sink.Files.Keys));
             var metadata = Metadata.FromJson(json);
             Assert.IsGreaterThan(0, metadata.Types.Length);
@@ -116,7 +116,7 @@ namespace Test_Qt.Bridge.CSharp.Generator
                 && r.Source is MethodInfo m && m.ReflectedType.Name == "Device"
                 && m.Name == "Assert");
 
-            Assert.IsTrue(result.Sink.Files.TryGetValue("qt_bridge_metadata.json", out var json),
+            Assert.IsTrue(result.Sink.Files.TryGetValue(TestCodeGenerator.MetadataFileName, out var json),
                 string.Join(", ", result.Sink.Files.Keys));
             var metadata = Metadata.FromJson(json);
 
@@ -179,7 +179,7 @@ namespace Test_Qt.Bridge.CSharp.Generator
                 && r.Source is MethodInfo m && m.ReflectedType.Name == "Brush"
                 && m.Name == "Assert" && m.GetParameters()[0].ParameterType.Name == "Size");
 
-            Assert.IsTrue(result.Sink.Files.TryGetValue("qt_bridge_metadata.json", out var json),
+            Assert.IsTrue(result.Sink.Files.TryGetValue(TestCodeGenerator.MetadataFileName, out var json),
                 string.Join(", ", result.Sink.Files.Keys));
             var metadata = Metadata.FromJson(json);
 

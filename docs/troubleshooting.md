@@ -133,6 +133,8 @@ Search it for the camelCase name QML uses. If the name is absent, QML cannot see
 
 Metadata mode records type information in JSON rather than generating a separate C++ wrapper for
 each type. Inspect `obj/<configuration>/<framework>/qt/native/qt_bridge_metadata.json` instead.
+That is the default name; if the project sets `QtBridgeMetadataFileName`, inspect the file using
+that configured name.
 
 Members disappear from either generated output when they stop being instance members of the exported
 type - for example when a method is made `static` or its visibility is reduced below `public`.

@@ -92,7 +92,7 @@ namespace Test_Qt.Bridge.CSharp.Generator
                     typeof(Qt.Bridge.CodeGeneration.Rules.Metadata.GenerateType).Assembly
                 ],
                 ct: ct);
-            Assert.IsTrue(result.Sink.Files.TryGetValue("qt_bridge_metadata.json", out var json),
+            Assert.IsTrue(result.Sink.Files.TryGetValue(TestCodeGenerator.MetadataFileName, out var json),
                 string.Join(", ", result.Sink.Files.Keys));
             return JsonNode.Parse(json)!;
         }

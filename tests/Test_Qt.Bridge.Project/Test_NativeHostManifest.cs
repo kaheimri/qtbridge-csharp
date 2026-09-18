@@ -19,6 +19,8 @@ namespace Test_Qt.Bridge.Project
                 ManifestPayloadSize & 0xff,
                 ManifestPayloadSize >> 8];
 
+        private const string MetadataFileName = "qt_bridge_metadata_dummy_name.json";
+
         private const string Source = """
              using Qt.Bridge.Models;
              using Qt.Quick;
@@ -61,11 +63,14 @@ namespace Test_Qt.Bridge.Project
             temp.Create(new() { PackageReferences = [Packages.QtBridge] });
             temp.AddFile("Program.cs", Source);
 
-            var build = await temp.BuildAsync();
+            var build = await temp.BuildAsync(new()
+            {
+                Properties = [("QtBridgeMetadataFileName", MetadataFileName)]
+            });
             temp.SaveLog();
             Assert.IsTrue(build.Ok, build.Output);
 
-            var metadataPath = Path.Combine(temp.ExeDir, "qt_bridge_metadata.json");
+            var metadataPath = Path.Combine(temp.ExeDir, MetadataFileName);
             Assert.IsTrue(File.Exists(metadataPath),
                 $"the build deployed no type metadata to checksum: {metadataPath}");
 

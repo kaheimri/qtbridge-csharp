@@ -275,6 +275,8 @@ namespace Qt.Qml
       <QtGenCmd
         >$(QtGenCmd) --target "$(ProjectQtNativeRootDir)"</QtGenCmd>
       <QtGenCmd
+        >$(QtGenCmd) --metadata-file-name "$(QtBridgeMetadataFileName)"</QtGenCmd>
+      <QtGenCmd
         >$(QtGenCmd) @(_ResolvedProjectReferencePaths->'--ref &quot;%(Identity)&quot;', ' ')</QtGenCmd>
       <QtGenCmd
         >$(QtGenCmd) @(RuntimeCopyLocalItems->'--ref &quot;%(Identity)&quot;', ' ')</QtGenCmd>
@@ -316,8 +318,8 @@ namespace Qt.Qml
     </PropertyGroup>
 
     <Copy
-      SourceFiles="$(ProjectQtNativeRootDir)/qt_bridge_metadata.json"
-      DestinationFiles="$(ProjectDir)$(OutDir)qt_bridge_metadata.json" />
+      SourceFiles="$(ProjectQtNativeRootDir)/$(QtBridgeMetadataFileName)"
+      DestinationFiles="$(ProjectDir)$(OutDir)$(QtBridgeMetadataFileName)" />
 
   </Target>
   <!-- END QtBridgeGenerate-->
@@ -504,7 +506,7 @@ namespace Qt.Qml
 
     <!-- the deployed type metadata -->
     <PropertyGroup>
-      <QtBridgeMetadataFile>$(ProjectDir)$(OutDir)qt_bridge_metadata.json</QtBridgeMetadataFile>
+      <QtBridgeMetadataFile>$(ProjectDir)$(OutDir)$(QtBridgeMetadataFileName)</QtBridgeMetadataFile>
       <QtBridgeMetadataFile Condition="!Exists('$(QtBridgeMetadataFile)')" />
     </PropertyGroup>
 

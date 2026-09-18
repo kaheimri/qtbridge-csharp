@@ -113,7 +113,7 @@ namespace Qt.Bridge.CodeGeneration
 
         public enum Options
         {
-            Source, Ref, Exclude, Target, Rules, Clean, CleanIgnores
+            Source, Ref, Exclude, Target, Rules, Clean, CleanIgnores, MetadataFileName
         }
 
         private static RootCommand Command { get; }
@@ -155,6 +155,11 @@ namespace Qt.Bridge.CodeGeneration
                 Options.CleanIgnores, new Option<string[]>(
                     "--clean-ignores", "When cleaning, ignore path in target dir tree")
                 { Arity = ArgumentArity.OneOrMore, ArgumentHelpName = "path" }
+            },
+            {
+                Options.MetadataFileName, new Option<string>(
+                    "--metadata-file-name", "Name of the generated type metadata file")
+                { Arity = ArgumentArity.ExactlyOne, ArgumentHelpName = "file-name" }
             }
         };
 
@@ -173,6 +178,15 @@ namespace Qt.Bridge.CodeGeneration
 
             if (new FileInfo(src) is not { Exists: true } srcFile)
                 return Error(ctx, ExitCode.SourceFileNotFound, $@"File not found: '{src}'");
+
+            GeneratorOptions.MetadataFileName = null;
+            if (ctx.TryGetValue(Options.MetadataFileName, out string metadataFileName)) {
+                if (!IsFileName(metadataFileName)) {
+                    return Error(ctx, ExitCode.GenerationError,
+                        "--metadata-file-name must not be empty and or contain path separators");
+                }
+                GeneratorOptions.MetadataFileName = metadataFileName;
+            }
 
             ctx.TryGetValue(Options.Ref, out string[] refs);
             var assemblies = DistinctByAssemblyIdentity(
@@ -270,6 +284,13 @@ namespace Qt.Bridge.CodeGeneration
             }
 
             return ExitCode.Ok;
+        }
+
+        private static bool IsFileName(string value)
+        {
+            return !string.IsNullOrWhiteSpace(value)
+                && value is not "." and not ".."
+                && value.IndexOfAny(['/', '\\', '\0']) < 0;
         }
 
         internal static (int, int) Clean(string targetPath, string[] ignored, FileInfo[] generated)
