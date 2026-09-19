@@ -33,6 +33,12 @@ namespace Test_QtQuickTest
         { }
     }
 
+    [QmlElement]
+    public sealed class PlainElement
+    {
+        public int Value() => 42;
+    }
+
     internal class Program
     {
         static int Main(string[] args)

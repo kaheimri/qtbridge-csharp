@@ -327,6 +327,12 @@ public:
 
         const auto *metaObject = typeDef->toMetaObject();
         type->metaObject = metaObject;
+        const auto qmlTypeId = type->baseClass == BaseClass::Object
+            ? QmlMetaType<QObject>::self()
+            : QmlMetaType<QDotNetDynamicObject>::self();
+        const auto qmlListId = type->baseClass == BaseClass::Object
+            ? QmlMetaType<QObject>::list()
+            : QmlMetaType<QDotNetDynamicObject>::list();
         typeDefs[metaObject] = typeDef;
 
         if (qmlName.isEmpty())
@@ -359,7 +365,7 @@ public:
                 return instance;
             };
             s.instanceMetaObject = metaObject;
-            s.typeId = QmlMetaType<QDotNetDynamicObject>::self();
+            s.typeId = qmlTypeId;
             s.extensionObjectCreate = nullptr;
             s.extensionMetaObject = nullptr;
             s.revision = QTypeRevision::zero();
@@ -376,8 +382,8 @@ public:
             t.objectSize = sizeof(QDotNetDynamicObject);
             t.create = QDotNetDynamicObject::createObject;
             t.userdata = const_cast<DynamicType *>(type);
-            t.typeId = QmlMetaType<QDotNetDynamicObject>::self();
-            t.listId = QmlMetaType<QDotNetDynamicObject>::list();
+            t.typeId = qmlTypeId;
+            t.listId = qmlListId;
             t.parserStatusCast = StaticCastSelector<QQmlParserStatus>::cast();
             t.valueSourceCast = StaticCastSelector<QQmlPropertyValueSource>::cast();
             t.valueInterceptorCast = StaticCastSelector<QQmlPropertyValueInterceptor>::cast();
@@ -642,11 +648,9 @@ private:
     {
         Q_DOTNET_PROFILE_FUNC();
 
-        if (!QDotNetObject::type().isAssignableTo<IQmlElement>()) {
-            qWarning() << "QDotNetDynamicObject: missing IQmlElement implementation:" << type->name;
-            return;
-        }
         if (qmlElement || !type->isQmlElement)
+            return;
+        if (!QDotNetObject::type().isAssignableTo<IQmlElement>())
             return;
         qmlElement = new DynamicQmlElement;
         RESOLVE_FUNC(qmlElement, QmlClassBegin);

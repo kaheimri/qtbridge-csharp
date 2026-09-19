@@ -12,6 +12,11 @@ Item {
     property var peopleFromItemRole: []
     property var namesFromPropertyRole: []
     property var agesFromPropertyRole: []
+    property PlainElement typedPlain: plain
+
+    PlainElement {
+        id: plain
+    }
 
     CollectionModels {
         id: fixture
@@ -56,6 +61,10 @@ Item {
             compare(root.peopleFromItemRole[1].age, 85)
             compare(root.namesFromPropertyRole, ["Ada", "Grace"])
             compare(root.agesFromPropertyRole, [36, 85])
+        }
+
+        function test_plain_metadata_element() {
+            compare(root.typedPlain.value(), 42)
         }
     }
 }
