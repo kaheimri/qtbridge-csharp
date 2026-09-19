@@ -35,6 +35,10 @@
 
   <ItemGroup>
     <ProjectReference
+      Include="..\..\src\Qt.Bridge.CSharp.AppHost\Qt.Bridge.CSharp.AppHost.csproj"
+      ReferenceOutputAssembly="false"
+      PrivateAssets="all" />
+    <ProjectReference
       Include="..\..\src\Qt.Bridge.CSharp.Build.Tasks\Qt.Bridge.CSharp.Build.Tasks.csproj"
       ReferenceOutputAssembly="false"
       PrivateAssets="all" />
