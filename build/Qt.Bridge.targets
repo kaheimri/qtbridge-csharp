@@ -553,7 +553,7 @@ namespace Qt.Qml
   -->
   <Target Name="QtBridgePrepareAppHost"
     BeforeTargets="_CreateAppHost;_CreateAppHostForPublish"
-    DependsOnTargets="QtBridgeBuild"
+    DependsOnTargets="QtBridgeBuild;QtBridgePackageResources"
     Condition="'$(QtBridgeIsNativeHostTemplate)' != 'true'
       AND '$(DesignTimeBuild)' != 'true'
       AND '$(AppHostSourcePath)' != '' AND Exists('$(AppHostSourcePath)')">
@@ -573,10 +573,17 @@ namespace Qt.Qml
       <QtBridgeMetadataFile Condition="!Exists('$(QtBridgeMetadataFile)')" />
     </PropertyGroup>
 
+    <!-- the deployed external resource pack -->
+    <PropertyGroup>
+      <QtBridgeResourcePackFile>$(TargetDir)$(QtBridgeResourcePackFileName)</QtBridgeResourcePackFile>
+      <QtBridgeResourcePackFile Condition="!Exists('$(QtBridgeResourcePackFile)')" />
+    </PropertyGroup>
+
     <!-- patch the native host manifest into the app-host template -->
     <PatchNativeHostManifest
       HostPath="$(QtBridgePatchedAppHost)" AssemblyFileName="$(TargetFileName)"
-      MetadataFilePath="$(QtBridgeMetadataFile)" />
+      MetadataFilePath="$(QtBridgeMetadataFile)"
+      ResourcePackFilePath="$(QtBridgeResourcePackFile)" />
 
     <!-- redirect the app-host source path to the patched version -->
     <PropertyGroup>

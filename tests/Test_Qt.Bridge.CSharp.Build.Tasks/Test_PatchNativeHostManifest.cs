@@ -44,7 +44,8 @@ namespace Test_Qt.Bridge.CSharp.Build.Tasks
         }
 
         private (PatchNativeHostManifest Task, TestBuildEngine Engine) CreateTask(
-            string hostPath, string assemblyFileName = AssemblyName, string metadataFilePath = "")
+            string hostPath, string assemblyFileName = AssemblyName, string metadataFilePath = "",
+            string resourcePackFilePath = "")
         {
             var engine = new TestBuildEngine();
             return (new PatchNativeHostManifest
@@ -52,7 +53,8 @@ namespace Test_Qt.Bridge.CSharp.Build.Tasks
                 BuildEngine = engine,
                 HostPath = hostPath,
                 AssemblyFileName = assemblyFileName,
-                MetadataFilePath = metadataFilePath
+                MetadataFilePath = metadataFilePath,
+                ResourcePackFilePath = resourcePackFilePath
             }, engine);
         }
 
@@ -146,6 +148,68 @@ namespace Test_Qt.Bridge.CSharp.Build.Tasks
             Assert.IsFalse(task.Execute());
             Assert.HasCount(1, engine.Errors);
             Assert.Contains("Type metadata file not found", engine.Errors[0].Message!);
+        }
+
+        [TestMethod]
+        public void Execute_WritesTheResourcePackNameAndChecksum()
+        {
+            const string packFileName = "qt_bridge_resources.rcc";
+
+            var packPath = WriteFile(packFileName, "qres");
+            var hostPath = WriteHost(CreateHost());
+
+            Assert.IsTrue(CreateTask(hostPath, resourcePackFilePath: packPath).Task.Execute());
+
+            var host = File.ReadAllBytes(hostPath);
+            Assert.AreEqual(packFileName, Encoding.UTF8.GetString(host,
+                TemplateOffset + RccNameOffset, packFileName.Length));
+            Assert.AreEqual(0, host[TemplateOffset + RccNameOffset + packFileName.Length]);
+            Assert.AreEqual(Convert.ToHexString(Checksum(packPath)),
+                Convert.ToHexString(Slice(host, RccChecksumOffset, Sha256ChecksumSize)));
+        }
+
+        [TestMethod]
+        public void Execute_KeepsMetadataAndResourcePackFieldsSeparate()
+        {
+            var metadataPath = WriteFile("metadata.json", "{\"types\":[]}");
+            var packPath = WriteFile("pack.rcc", "qres");
+            var hostPath = WriteHost(CreateHost());
+
+            Assert.IsTrue(CreateTask(hostPath, metadataFilePath: metadataPath,
+                resourcePackFilePath: packPath).Task.Execute());
+
+            var host = File.ReadAllBytes(hostPath);
+            Assert.AreEqual("metadata.json", Encoding.UTF8.GetString(host,
+                TemplateOffset + MetadataNameOffset, "metadata.json".Length));
+            Assert.AreEqual("pack.rcc", Encoding.UTF8.GetString(host,
+                TemplateOffset + RccNameOffset, "pack.rcc".Length));
+            Assert.AreEqual(Convert.ToHexString(Checksum(metadataPath)),
+                Convert.ToHexString(Slice(host, MetadataChecksumOffset, Sha256ChecksumSize)));
+            Assert.AreEqual(Convert.ToHexString(Checksum(packPath)),
+                Convert.ToHexString(Slice(host, RccChecksumOffset, Sha256ChecksumSize)));
+        }
+
+        [TestMethod]
+        public void Execute_LeavesTheResourcePackSlotsZeroWhenThereIsNoPack()
+        {
+            var hostPath = WriteHost(CreateHost());
+
+            Assert.IsTrue(CreateTask(hostPath).Task.Execute());
+
+            var host = File.ReadAllBytes(hostPath);
+            for (var i = RccNameOffset; i < ManifestChecksumOffset; ++i)
+                Assert.AreEqual(0, host[TemplateOffset + i], $"expected zero at {i}");
+        }
+
+        [TestMethod]
+        public void Execute_FailsWhenTheResourcePackDoesNotExist()
+        {
+            var (task, engine) = CreateTask(WriteHost(CreateHost()),
+                resourcePackFilePath: Path.Combine(TempDirectory, "does-not-exist.rcc"));
+
+            Assert.IsFalse(task.Execute());
+            Assert.HasCount(1, engine.Errors);
+            Assert.Contains("Resource pack file not found", engine.Errors[0].Message!);
         }
 
         [TestMethod]

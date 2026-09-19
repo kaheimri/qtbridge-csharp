@@ -36,7 +36,7 @@ namespace Qt.Bridge.CSharp.Build.Tasks
 
         internal const int RccNameOffset = 552;
         private const int RccNameSize = 256;
-        private const int RccChecksumOffset = 808;
+        internal const int RccChecksumOffset = 808;
 
         internal const int ManifestChecksumOffset = 840;
         internal const int ManifestChecksumSize = 4;
@@ -60,6 +60,8 @@ namespace Qt.Bridge.CSharp.Build.Tasks
 
         public string MetadataFilePath { get; set; } = "";
 
+        public string ResourcePackFilePath { get; set; } = "";
+
         public override bool Execute()
         {
             if (!File.Exists(HostPath)) {
@@ -72,6 +74,11 @@ namespace Qt.Bridge.CSharp.Build.Tasks
                 return false;
             }
 
+            if (ResourcePackFilePath.Length > 0 && !File.Exists(ResourcePackFilePath)) {
+                Log.LogError($"Resource pack file not found: '{ResourcePackFilePath}'.");
+                return false;
+            }
+
             if (AssemblyFileName.Length == 0) {
                 Log.LogError("Native host assembly file name must not be empty.");
                 return false;
@@ -80,11 +87,13 @@ namespace Qt.Bridge.CSharp.Build.Tasks
             var assemblyName = EncodeName(AssemblyFileName, AssemblyNameSize, "assembly file name");
             var metadataName = EncodeName(MetadataFilePath.Length == 0
                 ? "" : Path.GetFileName(MetadataFilePath), MetadataNameSize, "metadata file name");
-            if (assemblyName == null || metadataName == null)
+            var rccName = EncodeName(ResourcePackFilePath.Length == 0
+                ? "" : Path.GetFileName(ResourcePackFilePath), RccNameSize, "resource pack file name");
+            if (assemblyName == null || metadataName == null || rccName == null)
                 return false;
 
             try {
-                return Patch(assemblyName, metadataName);
+                return Patch(assemblyName, metadataName, rccName);
             } catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) {
                 Log.LogErrorFromException(ex, showStackTrace: false);
                 return false;
@@ -106,7 +115,7 @@ namespace Qt.Bridge.CSharp.Build.Tasks
             return name;
         }
 
-        private bool Patch(byte[] assemblyName, byte[] metadataName)
+        private bool Patch(byte[] assemblyName, byte[] metadataName, byte[] rccName)
         {
             var hostBytes = File.ReadAllBytes(HostPath);
             var templateOffset = FindUniqueMarker(hostBytes);
@@ -139,6 +148,12 @@ namespace Qt.Bridge.CSharp.Build.Tasks
             if (metadataName.Length > 0) {
                 Buffer.BlockCopy(metadataName, 0, template, MetadataNameOffset, metadataName.Length);
                 WriteSha256Checksum(MetadataFilePath, template, MetadataChecksumOffset);
+            }
+
+            // A missing resource pack can leave its fields zero.
+            if (rccName.Length > 0) {
+                Buffer.BlockCopy(rccName, 0, template, RccNameOffset, rccName.Length);
+                WriteSha256Checksum(ResourcePackFilePath, template, RccChecksumOffset);
             }
 
             var checksum = Crc32.Compute(template, 0, ManifestChecksumOffset);
