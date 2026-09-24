@@ -21,6 +21,20 @@
       >$([System.String]::Copy('$(IntermediateOutputPath)').Replace('\','/'))qt/native/source</QtNativeSourceDir>
     <QtNativeBinDir Condition="'$(_QtNativeBinDirIsDefault)' == 'true'"
       >$([System.String]::Copy('$(IntermediateOutputPath)').Replace('\','/'))qt/native/bin</QtNativeBinDir>
+    <!--
+      NuGet imports package .props before the consuming project body and package .targets after it.
+      Resolve intermediate paths here so project-level overrides have already been evaluated.
+    -->
+    <_QtProjectIntermediateDir Condition="'$(IntermediateOutputPath)' != ''"
+      >$([MSBuild]::NormalizePath('$(ProjectDir)', '$(IntermediateOutputPath)'))</_QtProjectIntermediateDir>
+    <_QtProjectBaseIntermediateDir Condition="'$(BaseIntermediateOutputPath)' != ''"
+      >$([MSBuild]::NormalizePath('$(ProjectDir)', '$(BaseIntermediateOutputPath)'))</_QtProjectBaseIntermediateDir>
+    <_QtProjectNativeBuildDir
+      >$([MSBuild]::NormalizePath('$(ProjectDir)', '$(QtNativeBuildDir)'))</_QtProjectNativeBuildDir>
+    <_QtProjectNativeSourceDir
+      >$([MSBuild]::NormalizePath('$(ProjectDir)', '$(QtNativeSourceDir)'))</_QtProjectNativeSourceDir>
+    <_QtProjectNativeBinDir
+      >$([MSBuild]::NormalizePath('$(ProjectDir)', '$(QtNativeBinDir)'))</_QtProjectNativeBinDir>
     <QtBridgeBuildTasks Condition="'$(QtBridgeBuildTasks)' == ''"
       >$(MSBuildThisFileDirectory)Qt.Bridge.CSharp.Build.Tasks.dll</QtBridgeBuildTasks>
     <QtBridgeBuildTasks Condition="!Exists('$(QtBridgeBuildTasks)') AND '$(QtDotNetSolutionDir)' != ''"
@@ -88,7 +102,7 @@
 
     <MakeDir Directories="$(IntermediateOutputPath)qt/csharp" />
     <WriteLinesToFile Overwrite="true"
-      WriteOnlyWhenDifferent="true" File="$(ProjectDir)$(IntermediateOutputPath)$(QtResourceFilesCs)"
+      WriteOnlyWhenDifferent="true" File="$(_QtProjectIntermediateDir)/$(QtResourceFilesCs)"
       Lines="@(_QtResolvedResource->'[assembly: Qt.Bridge.QtResource(
     SourcePath = @&quot;%(SourcePath)&quot;, Alias = &quot;%(Alias)&quot;, Prefix = &quot;%(Prefix)&quot;,
     AssemblyId = &quot;%(AssemblyId)&quot;, Key = &quot;%(Key)&quot;,
@@ -148,7 +162,7 @@
       Directories="$(IntermediateOutputPath)qt/csharp" />
     <!-- Add C# source with paths of QML files; this will be an input for code generation -->
     <WriteLinesToFile Condition="'@(Qml)' != '' OR '@(QmlModule)' != ''" Overwrite="true"
-      WriteOnlyWhenDifferent="false" File="$(ProjectDir)$(IntermediateOutputPath)$(QtQmlFilesCs)"
+      WriteOnlyWhenDifferent="false" File="$(_QtProjectIntermediateDir)/$(QtQmlFilesCs)"
       Lines="
 @(QmlModule->'[assembly: Qt.Quick.QmlModule(
     Uri = &quot;%(Identity)&quot;, IsRoot = %(IsRoot), Path = @&quot;%(SourceDir)&quot;)]');
@@ -184,7 +198,7 @@ namespace Qt.Qml
     </ItemGroup>
     <MakeDir Directories="$(IntermediateOutputPath)qt/csharp" />
     <WriteLinesToFile Overwrite="true" WriteOnlyWhenDifferent="true"
-      File="$(ProjectDir)$(IntermediateOutputPath)$(QtGlobalsCs)"
+      File="$(_QtProjectIntermediateDir)/$(QtGlobalsCs)"
       Lines="@(QtGlobalAttribs->'[assembly: %(Identity)]')" />
     <ItemGroup>
       <Compile Include="$(IntermediateOutputPath)$(QtGlobalsCs)" />
@@ -266,9 +280,8 @@ namespace Qt.Qml
       Text="Error: Qt/.NET C++ Library not found" />
 
     <PropertyGroup>
-      <ProjectIntermediateDir>$(ProjectDir)$(IntermediateOutputPath)</ProjectIntermediateDir>
-      <ProjectQtNativeSourceDir
-        >$([System.IO.Path]::GetFullPath('$(ProjectDir)$(QtNativeSourceDir)'))</ProjectQtNativeSourceDir>
+      <ProjectIntermediateDir>$(_QtProjectIntermediateDir)/</ProjectIntermediateDir>
+      <ProjectQtNativeSourceDir>$(_QtProjectNativeSourceDir)</ProjectQtNativeSourceDir>
       <ProjectQtNativeRootDir
         >$([System.IO.Path]::GetFullPath('$(ProjectQtNativeSourceDir)/..'))</ProjectQtNativeRootDir>
       <QtGenCmd
@@ -327,7 +340,7 @@ namespace Qt.Qml
       <QtBridgeGeneratedMetadata
         >$(ProjectQtNativeRootDir)/$(QtBridgeMetadataFileName)</QtBridgeGeneratedMetadata>
       <QtBridgeDeployedMetadata
-        >$(ProjectDir)$(OutDir)$(QtBridgeMetadataFileName)</QtBridgeDeployedMetadata>
+        >$(TargetDir)$(QtBridgeMetadataFileName)</QtBridgeDeployedMetadata>
     </PropertyGroup>
     <Copy Condition="Exists('$(QtBridgeGeneratedMetadata)')"
       SourceFiles="$(QtBridgeGeneratedMetadata)"
@@ -359,7 +372,7 @@ namespace Qt.Qml
     Condition="'$(DesignTimeBuild)' != 'true'">
     <PropertyGroup>
       <_QtBuildReadyMarker
-        >$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)/$(QtNativeBuildDir)/.qt/qtbridge-build.ready'))</_QtBuildReadyMarker>
+        >$(_QtProjectNativeBuildDir)/.qt/qtbridge-build.ready</_QtBuildReadyMarker>
     </PropertyGroup>
     <Delete Files="$(_QtBuildReadyMarker)" />
   </Target>
@@ -519,7 +532,7 @@ namespace Qt.Qml
 
     <!-- the deployed type metadata -->
     <PropertyGroup>
-      <QtBridgeMetadataFile>$(ProjectDir)$(OutDir)$(QtBridgeMetadataFileName)</QtBridgeMetadataFile>
+      <QtBridgeMetadataFile>$(TargetDir)$(QtBridgeMetadataFileName)</QtBridgeMetadataFile>
       <QtBridgeMetadataFile Condition="!Exists('$(QtBridgeMetadataFile)')" />
     </PropertyGroup>
 
@@ -546,9 +559,9 @@ namespace Qt.Qml
 
     <PropertyGroup>
       <_QtQmllsBuildDir
-        >$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)/$(QtNativeBuildDir)'))</_QtQmllsBuildDir>
+        >$(_QtProjectNativeBuildDir)</_QtQmllsBuildDir>
       <_QtQmllsSourceDir
-        >$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)/$(QtNativeSourceDir)'))</_QtQmllsSourceDir>
+        >$(_QtProjectNativeSourceDir)</_QtQmllsSourceDir>
     </PropertyGroup>
 
     <ItemGroup>
@@ -609,8 +622,8 @@ namespace Qt.Qml
 
     <PropertyGroup>
       <!-- Absolute paths to the Qt-native source and build directories. -->
-      <_QtIdeSrcDir>$(ProjectDir)$(QtNativeSourceDir)</_QtIdeSrcDir>
-      <_QtIdeBldDir>$(ProjectDir)$(QtNativeBuildDir)</_QtIdeBldDir>
+      <_QtIdeSrcDir>$(_QtProjectNativeSourceDir)</_QtIdeSrcDir>
+      <_QtIdeBldDir>$(_QtProjectNativeBuildDir)</_QtIdeBldDir>
 
       <!--
         Metadata file directory: obj/[Platform]/[Configuration]/.
@@ -626,12 +639,12 @@ namespace Qt.Qml
         Condition="'$(Platform)' == ''
                 OR '$(Platform)' == 'AnyCPU'
                 OR '$(Platform)' == 'Any CPU'"
-        >$(ProjectDir)$(BaseIntermediateOutputPath)$(Configuration)</_QtMetadataFileDir>
+        >$(_QtProjectBaseIntermediateDir)/$(Configuration)</_QtMetadataFileDir>
       <_QtMetadataFileDir
         Condition="'$(Platform)' != ''
                AND '$(Platform)' != 'AnyCPU'
                AND '$(Platform)' != 'Any CPU'"
-        >$(ProjectDir)$(BaseIntermediateOutputPath)$(Platform)/$(Configuration)</_QtMetadataFileDir>
+        >$(_QtProjectBaseIntermediateDir)/$(Platform)/$(Configuration)</_QtMetadataFileDir>
 
       <!-- JSON path strings normalized to forward slashes for cross-host consumers. -->
       <_QtIdeJProjFile>$([System.String]::Copy(
@@ -647,7 +660,7 @@ namespace Qt.Qml
       <_QtIdeJManagedHostPath>$([System.String]::Copy(
         '$(TargetDir)$(_QtIdeExecutableName)').Replace('\', '/'))</_QtIdeJManagedHostPath>
       <_QtIdeJNativeHostPath>$([System.String]::Copy(
-        '$(ProjectDir)$(QtNativeBinDir)/$(_QtIdeExecutableName)').Replace('\', '/'))</_QtIdeJNativeHostPath>
+        '$(_QtProjectNativeBinDir)/$(_QtIdeExecutableName)').Replace('\', '/'))</_QtIdeJNativeHostPath>
       <_QtIdeJSrcDir>$([System.String]::Copy(
         '$(_QtIdeSrcDir)').Replace('\', '/'))</_QtIdeJSrcDir>
       <_QtIdeJBldDir>$([System.String]::Copy(
@@ -925,7 +938,7 @@ namespace Qt.Qml
 
     <ItemGroup>
       <QmlDeploy Condition="'@(Qml)' != ''"
-        Include="$(ProjectDir)$(_QtQmlSourceDir)%(Qml.SourceDir)*">
+        Include="$(_QtProjectNativeSourceDir)/qml/%(Qml.SourceDir)*">
         <SourceDir>%(Qml.SourceDir)</SourceDir>
       </QmlDeploy>
       <_QtQmlDeployPath Include="@(QmlDeploy->'%(SourceDir)%(Filename)%(Extension)')" />
@@ -993,9 +1006,9 @@ namespace Qt.Qml
   <Target Name="QtBridgeFinalizeMetadataOnlyBuild" AfterTargets="QtBridgeDeployResources"
     Condition="'$(DesignTimeBuild)' != 'true' AND '$(QtGenSourceCode)' != 'true'">
     <ItemGroup>
-      <QtBridgeFiles Include="$(ProjectDir)$(QtNativeBuildDir)/.qt/.qmlls.build.ini" />
-      <QtBridgeFiles Include="$(ProjectDir)$(QtNativeBuildDir)/.qt/qtbridge_project_sources.qrc" />
-      <QtBridgeFiles Include="$(ProjectDir)$(QtNativeBuildDir)/.qt/qtbridge-build.ready" />
+      <QtBridgeFiles Include="$(_QtProjectNativeBuildDir)/.qt/.qmlls.build.ini" />
+      <QtBridgeFiles Include="$(_QtProjectNativeBuildDir)/.qt/qtbridge_project_sources.qrc" />
+      <QtBridgeFiles Include="$(_QtProjectNativeBuildDir)/.qt/qtbridge-build.ready" />
     </ItemGroup>
     <MakeDir Directories="@(QtBridgeFiles->DirectoryName()->Distinct())" />
     <Touch Files="@(QtBridgeFiles)" AlwaysCreate="true" />

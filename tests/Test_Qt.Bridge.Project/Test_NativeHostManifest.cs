@@ -3,6 +3,7 @@
 
 using System;
 using System.IO;
+using System.Text;
 using System.Threading;
 
 namespace Test_Qt.Bridge.Project
@@ -59,6 +60,37 @@ namespace Test_Qt.Bridge.Project
             EnvVars = [("QT_FORCE_STDERR_LOGGING", "1")],
             StdErr = Redirect.StdOut
         };
+
+        [TestMethod]
+        public async Task BuildSupportsAnAbsoluteOutDir()
+        {
+            using var temp = new TempProject();
+            temp.Create(new() { PackageReferences = [Packages.QtBridge] });
+            temp.AddFile("Program.cs", Source);
+            var outputDirectory = Path.Combine(temp.ProjectDir, "redirected-output")
+                + Path.DirectorySeparatorChar;
+
+            var build = await temp.BuildAsync(new()
+            {
+                Properties = [
+                    ("OutDir", outputDirectory),
+                    ("QtBridgeMetadataFileName", MetadataFileName)
+                ]
+            });
+            temp.SaveLog();
+
+            Assert.IsTrue(build.Ok, build.Output);
+            Assert.IsTrue(File.Exists(Path.Combine(outputDirectory, MetadataFileName)));
+
+            var executable = await File.ReadAllBytesAsync(temp.ExePath, Token);
+            var manifest = IndexOf(executable, ManifestHeader);
+            Assert.IsGreaterThanOrEqualTo(0, manifest, "no patched manifest header found");
+            var metadataName = Encoding.UTF8.GetString(
+                executable,
+                manifest + MetadataNameOffset,
+                MetadataFileName.Length);
+            Assert.AreEqual(MetadataFileName, metadataName);
+        }
 
         [TestMethod]
         public async Task StartupRejectsAlteredDeployedBytes()

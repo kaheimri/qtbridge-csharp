@@ -88,6 +88,7 @@
     <_QtNativeBuildDirIsDefault Condition="'$(QtNativeBuildDir)' == ''">true</_QtNativeBuildDirIsDefault>
     <_QtNativeSourceDirIsDefault Condition="'$(QtNativeSourceDir)' == ''">true</_QtNativeSourceDirIsDefault>
     <_QtNativeBinDirIsDefault Condition="'$(QtNativeBinDir)' == ''">true</_QtNativeBinDirIsDefault>
+
   </PropertyGroup>
 
   <PropertyGroup>
@@ -119,7 +120,7 @@
     <QtResx Remove="$(BaseIntermediateOutputPath)**/*.resx" />
     <!-- Add QML files to up-to-date check of VS -->
     <UpToDateCheckInput Set="Qml" Include="@(Qml)" />
-    <UpToDateCheckOutput Set="Qml" Include="$(ProjectDir)$(IntermediateOutputPath)$(QtQmlFilesCs)" />
+    <UpToDateCheckOutput Set="Qml" Include="$(_QtProjectIntermediateDir)/$(QtQmlFilesCs)" />
     <!-- Add QML build-metadata to up-to-date check of VS -->
     <UpToDateCheckInput Set="QtBridgeQmlBuildMetadata" Include="@(Qml);$(MSBuildProjectFullPath)" />
     <UpToDateCheckOutput Set="QtBridgeQmlBuildMetadata"
@@ -136,7 +137,7 @@
       Include="$(IntermediateOutputPath)qt/native/build/.qt/qtbridge_project_sources.qrc" />
     <UpToDateCheckInput Set="QtResource" Include="@(QtResource);@(QtResx)" />
     <UpToDateCheckOutput Set="QtResource"
-      Include="$(ProjectDir)$(IntermediateOutputPath)$(QtResourceFilesCs)" />
+      Include="$(_QtProjectIntermediateDir)/$(QtResourceFilesCs)" />
     <!-- Add reference to source files for incremental build -->
     <QtDotNetNativeSource
       Condition="'$(QtNativeSourceDir)' != ''"

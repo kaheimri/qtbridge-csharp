@@ -55,6 +55,22 @@ namespace Test_Qt.Bridge.CSharp.Build.Tasks
             Assert.IsFalse(File.Exists(deployed));
         }
 
+        [TestMethod]
+        public void QmlGeneratedSourcesSupportARedirectedIntermediateOutputPath()
+        {
+            var redirectedIntermediateOutput = Path.Combine(TempDirectory, "redirected", "obj")
+                + Path.DirectorySeparatorChar;
+            var project = WriteQmlProject(redirectedIntermediateOutput,
+                useDefaultNativeDirectories: true);
+            File.WriteAllText(Path.Combine(TempDirectory, "Page.qml"), "import QtQuick");
+
+            var result = RunMsBuild(project, "RunQmlDeployment", null);
+
+            Assert.AreEqual(0, result.ExitCode, result.Output);
+            Assert.IsTrue(File.Exists(Path.Combine(redirectedIntermediateOutput, "qt", "csharp",
+                "QmlFiles.cs")), result.Output);
+        }
+
         protected override string TempDirectoryName => "qtbridge-native-deployment-tests";
 
         private string WriteProject()
@@ -111,18 +127,27 @@ namespace Test_Qt.Bridge.CSharp.Build.Tasks
                 | UnixFileMode.UserExecute);
         }
 
-        private string WriteQmlProject()
+        private string WriteQmlProject(
+            string intermediateOutputPath = "obj/",
+            bool useDefaultNativeDirectories = false)
         {
             Directory.CreateDirectory(TempDirectory);
+            var props = Path.Combine(FindRepositoryRoot(), "build", "Qt.Bridge.props");
             var targets = Path.Combine(FindRepositoryRoot(), "build", "Qt.Bridge.targets");
             var project = Path.Combine(TempDirectory, "QmlDeployment.proj");
             File.WriteAllText(project, $"""
                 <Project>
+                  {(useDefaultNativeDirectories ? "" : """
+                  <PropertyGroup>
+                    <QtNativeSourceDir>native/source</QtNativeSourceDir>
+                  </PropertyGroup>
+                  """)}
+                  <Import Project="{XmlEscape(props)}" />
                   <PropertyGroup>
                     <DesignTimeBuild>false</DesignTimeBuild>
                     <ProjectDir>$(MSBuildProjectDirectory)/</ProjectDir>
-                    <IntermediateOutputPath>obj/</IntermediateOutputPath>
-                    <QtNativeSourceDir>native/source</QtNativeSourceDir>
+                    <BaseIntermediateOutputPath>{XmlEscape(intermediateOutputPath)}</BaseIntermediateOutputPath>
+                    <IntermediateOutputPath>{XmlEscape(intermediateOutputPath)}</IntermediateOutputPath>
                     <TargetDir>$(MSBuildProjectDirectory)/output/</TargetDir>
                   </PropertyGroup>
                   <Import Project="{XmlEscape(targets)}" />
