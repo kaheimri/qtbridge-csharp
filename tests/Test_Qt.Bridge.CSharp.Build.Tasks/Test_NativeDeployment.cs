@@ -31,6 +31,30 @@ namespace Test_Qt.Bridge.CSharp.Build.Tasks
             Assert.DoesNotContain("TargetTestApp", deployed);
         }
 
+        [TestMethod]
+        public void QmlDeploymentRemovesFilesDeletedFromTheProject()
+        {
+            var project = WriteQmlProject();
+            var source = Path.Combine(TempDirectory, "Page.qml");
+            File.WriteAllText(source, "import QtQuick");
+
+            var first = RunMsBuild(project, "RunQmlDeployment", null);
+
+            Assert.AreEqual(0, first.ExitCode, first.Output);
+            var staged = Path.Combine(TempDirectory, "native", "source", "qml", "Application",
+                "Page.qml");
+            var deployed = Path.Combine(TempDirectory, "output", "Application", "Page.qml");
+            Assert.IsTrue(File.Exists(staged), first.Output);
+            Assert.IsTrue(File.Exists(deployed));
+
+            File.Delete(source);
+            var second = RunMsBuild(project, "RunQmlDeployment", null);
+
+            Assert.AreEqual(0, second.ExitCode, second.Output);
+            Assert.IsFalse(File.Exists(staged));
+            Assert.IsFalse(File.Exists(deployed));
+        }
+
         protected override string TempDirectoryName => "qtbridge-native-deployment-tests";
 
         private string WriteProject()
@@ -87,7 +111,45 @@ namespace Test_Qt.Bridge.CSharp.Build.Tasks
                 | UnixFileMode.UserExecute);
         }
 
-        private static BuildResult RunMsBuild(string project, string cmakeDirectory)
+        private string WriteQmlProject()
+        {
+            Directory.CreateDirectory(TempDirectory);
+            var targets = Path.Combine(FindRepositoryRoot(), "build", "Qt.Bridge.targets");
+            var project = Path.Combine(TempDirectory, "QmlDeployment.proj");
+            File.WriteAllText(project, $"""
+                <Project>
+                  <PropertyGroup>
+                    <DesignTimeBuild>false</DesignTimeBuild>
+                    <ProjectDir>$(MSBuildProjectDirectory)/</ProjectDir>
+                    <IntermediateOutputPath>obj/</IntermediateOutputPath>
+                    <QtNativeSourceDir>native/source</QtNativeSourceDir>
+                    <TargetDir>$(MSBuildProjectDirectory)/output/</TargetDir>
+                  </PropertyGroup>
+                  <Import Project="{XmlEscape(targets)}" />
+                  <Target Name="AddFixtureQml" BeforeTargets="QtBridgeSetupQml">
+                    <ItemGroup>
+                      <Qml Include="Page.qml"
+                        Condition="Exists('$(MSBuildProjectDirectory)/Page.qml')" />
+                    </ItemGroup>
+                  </Target>
+                  <Target Name="RunQmlDeployment"
+                    DependsOnTargets="QtBridgeAddQmlFiles;QtBridgeDeployQml" />
+                </Project>
+                """);
+            return project;
+        }
+
+        private static BuildResult RunMsBuild(string project, string cmakeDirectory) =>
+            RunMsBuild(project, "QtBridgeDeploy_SourceCode_Linux_MacOS", null, cmakeDirectory);
+
+        private static BuildResult RunMsBuild(string project, string target, string? property) =>
+            RunMsBuild(project, target, property, null);
+
+        private static BuildResult RunMsBuild(
+            string project,
+            string target,
+            string? property,
+            string? cmakeDirectory)
         {
             var info = new ProcessStartInfo("dotnet")
             {
@@ -95,11 +157,15 @@ namespace Test_Qt.Bridge.CSharp.Build.Tasks
                 RedirectStandardError = true,
                 UseShellExecute = false
             };
-            info.Environment["PATH"] = cmakeDirectory + Path.PathSeparator
-                + info.Environment["PATH"];
+            if (cmakeDirectory != null) {
+                info.Environment["PATH"] = cmakeDirectory + Path.PathSeparator
+                    + info.Environment["PATH"];
+            }
             info.ArgumentList.Add("msbuild");
             info.ArgumentList.Add(project);
-            info.ArgumentList.Add("/t:QtBridgeDeploy_SourceCode_Linux_MacOS");
+            info.ArgumentList.Add("/t:" + target);
+            if (property != null)
+                info.ArgumentList.Add(property);
             info.ArgumentList.Add("/nologo");
             info.ArgumentList.Add("/v:minimal");
 

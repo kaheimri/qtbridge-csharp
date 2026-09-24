@@ -139,7 +139,8 @@
   -->
   <Target Name="QtBridgeAddQmlFiles" BeforeTargets="CoreCompile" DependsOnTargets="QtBridgeSetupQml"
     Condition="'$(DesignTimeBuild)' != 'true'">
-    <!-- Copy QML files to native source dir -->
+    <!-- The staging directory belongs entirely to this target, so rebuild it from the current items. -->
+    <RemoveDir Directories="$(_QtQmlSourceDir)" />
     <Copy Condition="'@(Qml)' != ''"
       SourceFiles="$(ProjectDir)%(RelativeDir)%(Filename)%(Extension)"
       DestinationFolder="$(_QtQmlSourceDir)%(SourceDir)" />
@@ -912,18 +913,31 @@ namespace Qt.Qml
       ;QtBridgeDeploy_SourceCode_Linux_MacOS;
       ;QtBridgeDeploy_Metadata_Linux_MacOS"
     Condition="'$(DesignTimeBuild)' != 'true'">
+    <PropertyGroup>
+      <_QtQmlDeployManifest
+        >$(IntermediateOutputPath)qt/csharp/qml-deploy.txt</_QtQmlDeployManifest>
+    </PropertyGroup>
+    <ReadLinesFromFile Condition="Exists('$(_QtQmlDeployManifest)')"
+      File="$(_QtQmlDeployManifest)">
+      <Output TaskParameter="Lines" ItemName="_QtPreviouslyDeployedQml" />
+    </ReadLinesFromFile>
+    <Delete Files="@(_QtPreviouslyDeployedQml->'$(TargetDir)%(Identity)')" />
+
     <ItemGroup>
       <QmlDeploy Condition="'@(Qml)' != ''"
         Include="$(ProjectDir)$(_QtQmlSourceDir)%(Qml.SourceDir)*">
         <SourceDir>%(Qml.SourceDir)</SourceDir>
       </QmlDeploy>
+      <_QtQmlDeployPath Include="@(QmlDeploy->'%(SourceDir)%(Filename)%(Extension)')" />
     </ItemGroup>
     <Copy Condition="'@(QmlDeploy)' != ''"
       SourceFiles="%(Identity)"
       DestinationFolder="$(TargetDir)%(SourceDir)" />
+    <WriteLinesToFile File="$(_QtQmlDeployManifest)" Overwrite="true"
+      Lines="@(_QtQmlDeployPath)" />
     <WriteLinesToFile Condition="'@(QmlDeploy)' != ''"
       File="$(TargetDir)qtdeploy.txt" Overwrite="false"
-      Lines="%(SourceDir)%(Filename)%(Extension)" />
+      Lines="@(_QtQmlDeployPath)" />
   </Target>
   <!-- END QtBridgeDeployQml -->
 
