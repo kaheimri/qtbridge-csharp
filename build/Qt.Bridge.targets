@@ -510,7 +510,7 @@ namespace Qt.Qml
     <PropertyGroup>
       <!-- compute the path of the private, patched app-host template -->
       <QtBridgePatchedAppHost
-      >$([System.IO.Path]::GetFullPath('$(IntermediateOutputPath)qt_apphost_patched$(_NativeExecutableExtension)'))</QtBridgePatchedAppHost>
+      >$(_QtProjectIntermediateDir)/qt_apphost_patched$(_NativeExecutableExtension)</QtBridgePatchedAppHost>
     </PropertyGroup>
 
     <!-- copy the app-host template to the private, patched location -->
@@ -855,17 +855,38 @@ namespace Qt.Qml
 
     <Message Importance="high" Text="Qt Bridge: Deploying Qt..." />
 
+    <!--
+      CMake installs the native host together with its runtime dependencies. Stage that
+      installation so only the dependencies reach the managed application's output directory.
+    -->
+    <PropertyGroup>
+      <_QtNativeDeployDir
+        >$([System.IO.Path]::GetFullPath('$(QtNativeBuildDir)/deploy'))</_QtNativeDeployDir>
+      <_QtNativeDeployHostName
+        >$([System.IO.Path]::GetFileName('$(QtNativeHostPath)'))</_QtNativeDeployHostName>
+    </PropertyGroup>
+    <RemoveDir Directories="$(_QtNativeDeployDir)" />
+    <MakeDir Directories="$(_QtNativeDeployDir)" />
+
     <Message Importance="high"
       Text="Qt Bridge: deploying runtime dependencies via CMake install." />
-    <Exec Command="cmake --install . --prefix &quot;$(TargetDir)&quot;"
+    <Exec Command="cmake --install . --prefix &quot;$(_QtNativeDeployDir)&quot;"
       WorkingDirectory="$(QtNativeBuildDir)" IgnoreExitCode="true">
       <Output TaskParameter="ExitCode" PropertyName="DeployResult" />
     </Exec>
     <Error Condition="'$(DeployResult)' != '0'"
       Text="Error deploying Qt binaries with CMake install!" />
-    <Exec Condition="Exists('$(QtNativeBuildDir)/install_manifest.txt')"
-        Command="sed -e &quot;s#^$(TargetDir.Replace('\', '/').TrimEnd('/'))/##&quot; &quot;$(QtNativeBuildDir)/install_manifest.txt&quot; &gt;&gt; &quot;$(TargetDir)qtdeploy.txt&quot;"
-        IgnoreExitCode="true" />
+
+    <Delete Files="$(_QtNativeDeployDir)/$(_QtNativeDeployHostName)" />
+    <RemoveDir Condition="'$(QtHostIsMacOS)' == 'true'"
+      Directories="$(_QtNativeDeployDir)/$(_QtNativeDeployHostName).app" />
+    <ItemGroup>
+      <_QtNativeDeployFile Include="$(_QtNativeDeployDir)/**/*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_QtNativeDeployFile)"
+      DestinationFiles="@(_QtNativeDeployFile->'$(TargetDir)%(RecursiveDir)%(Filename)%(Extension)')" />
+    <WriteLinesToFile File="$(TargetDir)qtdeploy.txt" Overwrite="false"
+      Lines="@(_QtNativeDeployFile->'%(RecursiveDir)%(Filename)%(Extension)')" />
   </Target>
   <!-- END QtBridgeDeploy : GenSourceCode AND (HostIsLinux OR HostIsMacOS) -->
 

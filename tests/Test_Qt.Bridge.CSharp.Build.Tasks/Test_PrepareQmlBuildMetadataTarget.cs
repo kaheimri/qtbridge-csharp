@@ -324,8 +324,7 @@ namespace Test_Qt.Bridge.CSharp.Build.Tasks
                 File.WriteAllText(Path.Combine(qmlDirectory, "Details.qml"), "");
             }
 
-            var repositoryRoot = FindRepositoryRoot();
-            var targetsPath = Path.Combine(repositoryRoot, "build", "Qt.Bridge.targets");
+            var targetsPath = Path.Combine(FindRepositoryRoot(), "build", "Qt.Bridge.targets");
             var taskAssembly = typeof(PrepareQmlBuildMetadata).Assembly.Location;
             var qtDirectory = Path.Combine(TempDirectory, "qt");
             if (validQt) {
@@ -403,8 +402,7 @@ namespace Test_Qt.Bridge.CSharp.Build.Tasks
             if (includeQml)
                 File.WriteAllText(Path.Combine(TempDirectory, "Main.qml"), "");
 
-            var repositoryRoot = FindRepositoryRoot();
-            var propsPath = Path.Combine(repositoryRoot, "build", "Qt.Bridge.props");
+            var propsPath = Path.Combine(FindRepositoryRoot(), "build", "Qt.Bridge.props");
             var projectPath = Path.Combine(TempDirectory, "UpToDate.proj");
             File.WriteAllText(projectPath,
                 $"""
@@ -453,19 +451,6 @@ namespace Test_Qt.Bridge.CSharp.Build.Tasks
             process.WaitForExit();
             return new BuildResult(process.ExitCode, output + error);
         }
-
-        private static string FindRepositoryRoot()
-        {
-            var directory = new DirectoryInfo(AppContext.BaseDirectory);
-            while (directory != null) {
-                if (File.Exists(Path.Combine(directory.FullName, "build", "Qt.Bridge.targets")))
-                    return directory.FullName;
-                directory = directory.Parent;
-            }
-            throw new InvalidOperationException("Could not locate the repository root.");
-        }
-
-        private static string XmlEscape(string value) => SecurityElement.Escape(value) ?? "";
 
         private static string NormalizeHostPath(string path) =>
             Path.GetFullPath(PathUtilities.ToHostSeparators(path));
