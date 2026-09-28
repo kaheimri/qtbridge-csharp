@@ -35,8 +35,7 @@ namespace Test_Qt.Bridge.Project.ModelRemoveRanges
                 StdErr = Redirect.StdOut
             });
 
-            Assert.IsLessThanOrEqualTo((int)ExitCode.QTestFailure, run.ExitCode,
-                $"{ExitCodeHelper.ToString(run.ExitCode)}{Environment.NewLine}{run.StdOut}");
+            AssertQTestExitCode(run.ExitCode, run.StdOut);
 
             var pass = "PASS   : Test_QtQuickTest::tst_modelremoveranges::";
             Assert.Contains(pass + "initTestCase()", run.StdOut);

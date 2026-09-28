@@ -87,8 +87,7 @@ namespace Test_Qt.Bridge.Project.BugFix
                 Timeout = -1
             });
 
-            Assert.IsLessThanOrEqualTo((int)ExitCode.QTestFailure, run.ExitCode,
-                ExitCodeHelper.ToString(run.ExitCode));
+            AssertQTestExitCode(run.ExitCode);
 
             if (run.StdOut.Contains(
                 $"Test_InboundMemLeak::{testFunction}() Test function timed out"))

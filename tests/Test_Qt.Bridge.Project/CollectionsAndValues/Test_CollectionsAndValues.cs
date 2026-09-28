@@ -41,12 +41,8 @@ namespace Test_Qt.Bridge.Project.CollectionsAndValues
                 StdErr = Redirect.StdOut
             });
 
-            Assert.IsLessThanOrEqualTo((int)ExitCode.QTestFailure, run.ExitCode,
-                $"""
-                {ExitCodeHelper.ToString(run.ExitCode)}
-                {run.StdOut}
-                {run.StdErr}
-                """);
+            AssertQTestExitCode(run.ExitCode,
+                $"{run.StdOut}{Environment.NewLine}{run.StdErr}");
 
             Assert.Contains("PASS   : Test_CollectionsAndValues::initTestCase()", run.StdOut);
             Assert.Contains("PASS   : Test_CollectionsAndValues::arrayOfInts()", run.StdOut);

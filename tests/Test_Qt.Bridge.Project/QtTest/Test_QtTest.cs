@@ -25,8 +25,7 @@ namespace Test_Qt.Bridge.Project.QtTest
                 EnvVars = [("QT_FORCE_STDERR_LOGGING", "1")]
             });
 
-            Assert.IsLessThanOrEqualTo((int)ExitCode.QTestFailure, run.ExitCode,
-                ExitCodeHelper.ToString(run.ExitCode));
+            AssertQTestExitCode(run.ExitCode);
 
             Assert.Contains("PASS   : Test_QtTest::initTestCase()", run.StdOut);
             Assert.Contains("PASS   : Test_QtTest::assemblyExists()", run.StdOut);

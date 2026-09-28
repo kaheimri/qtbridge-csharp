@@ -44,8 +44,7 @@ namespace Test_Qt.Bridge.Project.Models.CollectionModel
             message.Fail.ForEach(msg => TestContext.WriteLine(msg));
             message.Warning.ForEach(msg => TestContext.WriteLine(msg));
 
-            Assert.IsLessThanOrEqualTo((int)ExitCode.QTestFailure, run.ExitCode,
-                ExitCodeHelper.ToString(run.ExitCode));
+            AssertQTestExitCode(run.ExitCode);
             Assert.IsEmpty(message.Fail);
         }
     }

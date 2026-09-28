@@ -45,8 +45,7 @@ namespace Test_Qt.Bridge.Project.BindingsAndInterfaces
             if (!string.IsNullOrWhiteSpace(run.StdOut))
                 Console.WriteLine(run.StdOut);
 
-            Assert.IsLessThanOrEqualTo((int)ExitCode.QTestFailure, run.ExitCode,
-                ExitCodeHelper.ToString(run.ExitCode));
+            AssertQTestExitCode(run.ExitCode);
 
             Assert.Contains("PASS   : Test_BindingsAndInterfaces::initTestCase()", run.StdOut);
             Assert.Contains("PASS   : Test_BindingsAndInterfaces::propertyBinding()", run.StdOut);

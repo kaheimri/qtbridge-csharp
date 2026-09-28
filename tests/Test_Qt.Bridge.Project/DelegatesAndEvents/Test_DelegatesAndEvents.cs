@@ -25,8 +25,7 @@ namespace Test_Qt.Bridge.Project.DelegatesAndEvents
                 StdErr = Redirect.StdOut
             });
 
-            Assert.IsLessThanOrEqualTo((int)ExitCode.QTestFailure, run.ExitCode,
-                ExitCodeHelper.ToString(run.ExitCode));
+            AssertQTestExitCode(run.ExitCode);
 
             Assert.Contains("PASS   : Test_DelegatesAndEvents::initTestCase()", run.StdOut);
             Assert.Contains("PASS   : Test_DelegatesAndEvents::delegates()", run.StdOut);

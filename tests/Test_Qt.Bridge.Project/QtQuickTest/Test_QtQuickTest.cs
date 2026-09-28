@@ -32,8 +32,7 @@ namespace Test_Qt.Bridge.Project.QtQuickTest
                 StdErr = Redirect.StdOut
             });
 
-            Assert.IsLessThanOrEqualTo((int)ExitCode.QTestFailure, run.ExitCode,
-                ExitCodeHelper.ToString(run.ExitCode));
+            AssertQTestExitCode(run.ExitCode);
 
             var pass = "PASS   : Test_QtQuickTest::tst_qtquicktest::";
             Assert.Contains(pass + "initTestCase()", run.StdOut);

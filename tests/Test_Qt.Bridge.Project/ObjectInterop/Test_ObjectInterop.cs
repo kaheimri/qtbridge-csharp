@@ -30,8 +30,7 @@ namespace Test_Qt.Bridge.Project.ObjectInterop
                 StdErr = Redirect.StdOut
             });
 
-            Assert.IsLessThanOrEqualTo((int)ExitCode.QTestFailure, run.ExitCode,
-                ExitCodeHelper.ToString(run.ExitCode));
+            AssertQTestExitCode(run.ExitCode);
 
             Assert.Contains("PASS   : Test_ObjectInterop::initTestCase()", run.StdOut);
             Assert.Contains("PASS   : Test_ObjectInterop::createObject()", run.StdOut);

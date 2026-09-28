@@ -32,8 +32,7 @@ namespace Test_Qt.Bridge.Project.StructuredData
                 StdErr  = Redirect.StdOut
             });
 
-            Assert.IsLessThanOrEqualTo((int)ExitCode.QTestFailure, run.ExitCode,
-                ExitCodeHelper.ToString(run.ExitCode));
+            AssertQTestExitCode(run.ExitCode);
 
             const string passPrefix = "PASS   : Test_StructuredData::tst_structureddata::";
             Assert.Contains(passPrefix + "test_person_roundtrip()", run.StdOut);

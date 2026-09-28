@@ -63,6 +63,14 @@ namespace Test_Qt.Bridge.Project.Shared
     /// </summary>
     public abstract class ManagedTestBase
     {
+        protected static void AssertQTestExitCode(int exitCode, string output = null)
+        {
+            var message = ExitCodeHelper.ToString(exitCode);
+            if (!string.IsNullOrEmpty(output))
+                message += $"{Environment.NewLine}{output}";
+            Assert.IsTrue(exitCode is (int)ExitCode.Ok or (int)ExitCode.QTestFailure, message);
+        }
+
         /// <summary>
         /// Check an assertion and transform a failure result into inconclusive.
         /// </summary>

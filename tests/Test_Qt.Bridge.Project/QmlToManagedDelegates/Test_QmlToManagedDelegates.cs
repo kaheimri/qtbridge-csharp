@@ -1,6 +1,7 @@
 // Copyright (C) 2026 The Qt Company Ltd.
 // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR GPL-3.0-only
 
+using System;
 using System.IO;
 using Test_Qt.Bridge.Project.Shared;
 
@@ -35,12 +36,7 @@ namespace Test_Qt.Bridge.Project.QmlToManagedDelegates
                 StdErr = Redirect.StdOut
             });
 
-            Assert.IsLessThanOrEqualTo((int)ExitCode.QTestFailure, run.ExitCode,
-                $"""
-                {ExitCodeHelper.ToString(run.ExitCode)}
-                {run.StdOut}
-                {run.StdErr}
-                """);
+            AssertQTestExitCode(run.ExitCode, $"{run.StdOut}{Environment.NewLine}{run.StdErr}");
 
             const string pass = "PASS   : Test_QmlToManagedDelegates::tst_qmltomanageddelegates::";
 

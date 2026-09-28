@@ -26,8 +26,7 @@ namespace Test_Qt.Bridge.Project.FunctionCalls
                 StdErr = Redirect.StdOut
             });
 
-            Assert.IsLessThanOrEqualTo((int)ExitCode.QTestFailure, run.ExitCode,
-                ExitCodeHelper.ToString(run.ExitCode));
+            AssertQTestExitCode(run.ExitCode);
 
             Assert.Contains("PASS   : Test_FunctionCalls::initTestCase()", run.StdOut);
             Assert.Contains("PASS   : Test_FunctionCalls::resolveFunction()", run.StdOut);

@@ -30,8 +30,7 @@ namespace Test_Qt.Bridge.Project.HostLifecycle
             if (!string.IsNullOrWhiteSpace(hostRun.StdOut))
                 Console.WriteLine(hostRun.StdOut);
 
-            Assert.IsLessThanOrEqualTo((int)ExitCode.QTestFailure, hostRun.ExitCode,
-                ExitCodeHelper.ToString(hostRun.ExitCode));
+            AssertQTestExitCode(hostRun.ExitCode);
 
             Assert.Contains("PASS   : Test_HostLifecycle::initTestCase()", hostRun.StdOut);
             Assert.Contains("PASS   : Test_HostLifecycle::loadHost()", hostRun.StdOut);
@@ -48,8 +47,7 @@ namespace Test_Qt.Bridge.Project.HostLifecycle
             if (!string.IsNullOrWhiteSpace(appRun.StdOut))
                 Console.WriteLine(appRun.StdOut);
 
-            Assert.IsLessThanOrEqualTo((int)ExitCode.QTestFailure, appRun.ExitCode,
-                ExitCodeHelper.ToString(appRun.ExitCode));
+            AssertQTestExitCode(appRun.ExitCode);
 
             Assert.Contains("PASS   : Test_HostLifecycle::initTestCase()", appRun.StdOut);
             Assert.Contains("PASS   : Test_HostLifecycle::appStartup()", appRun.StdOut);
