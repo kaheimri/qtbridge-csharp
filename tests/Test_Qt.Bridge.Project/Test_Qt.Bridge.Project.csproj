@@ -8,6 +8,7 @@
   <Import Project="$([MSBuild]::GetPathOfFileAbove(qt_version.props))" />
 
   <PropertyGroup>
+    <TestBinaryLog>true</TestBinaryLog>
     <TestBuildExamples>true</TestBuildExamples>
   </PropertyGroup>
 
@@ -258,6 +259,10 @@
     <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
       <_Parameter1>Build.Platform</_Parameter1>
       <_Parameter2>$(Platform)</_Parameter2>
+    </AssemblyAttribute>
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>Settings.BinaryLog</_Parameter1>
+      <_Parameter2>$(TestBinaryLog)</_Parameter2>
     </AssemblyAttribute>
     <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
       <_Parameter1>Settings.BuildExamples</_Parameter1>

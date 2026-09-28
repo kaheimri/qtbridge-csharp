@@ -33,6 +33,7 @@ namespace Test_Qt.Bridge.Project
 
         public static class Settings
         {
+            public static bool BinaryLog { get; private set; } = true;
             public static bool BuildExamples { get; private set; } = true;
 
             internal static void Init()

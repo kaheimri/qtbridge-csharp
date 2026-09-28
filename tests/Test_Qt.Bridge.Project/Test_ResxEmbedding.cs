@@ -74,8 +74,9 @@ namespace Test_Qt.Bridge.Project
             return temp;
         }
 
-        private static BuildOptions BuildTarget(string target) => new()
+        private static BuildOptions BuildTarget(string target, bool? binaryLog = null) => new()
         {
+            BinaryLog = binaryLog,
             Targets = [target],
             TargetPath = "",
             TargetExePath = ""
@@ -97,7 +98,8 @@ namespace Test_Qt.Bridge.Project
         {
             using var temp = CreateProject();
 
-            var (ok, output) = await temp.BuildAsync(BuildTarget("InspectEmbeddingCandidates"));
+            var (ok, output) = await temp.BuildAsync(
+                BuildTarget("InspectEmbeddingCandidates", binaryLog: true));
             temp.SaveLog();
             Assert.IsTrue(ok, output);
 

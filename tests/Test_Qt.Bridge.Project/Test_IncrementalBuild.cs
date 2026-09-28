@@ -68,7 +68,10 @@ ApplicationWindow {{
             });
             temp.AddFile("Program.cs", ProgramCs);
             temp.AddFile("Main.qml", MainQml);
-            await temp.BuildAsync(new() { Targets = targets });
+            await temp.BuildAsync(new() {
+                BinaryLog = action == null ? true : null,
+                Targets = targets
+            });
             if (action != null) {
                 switch (action) {
                     case "":
@@ -80,7 +83,7 @@ ApplicationWindow {{
                         temp.AddFile("Program.cs", ProgramCs.Replace($"//{action}//", ""));
                         break;
                 }
-                await temp.BuildAsync(new() { Targets = targets });
+                await temp.BuildAsync(new() { BinaryLog = true, Targets = targets });
             }
             temp.SaveLog(context);
             Assert.IsTrue(temp.Log.TryFindTarget("QtBridgeGenerate", out var target));

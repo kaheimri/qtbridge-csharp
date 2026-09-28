@@ -42,8 +42,8 @@ namespace Test_Qt.Bridge.Project
     public class BuildOptions
     {
         public Config Config { get; init; } = Config.Default;
-        public bool BinaryLog { get; init; } = true;
-        public bool Restore { get; init; } = true;
+        public bool? BinaryLog { get; init; }
+        public bool? Restore { get; init; }
         public IEnumerable<string> Targets { get; init; } = [];
         public IEnumerable<(string Name, string Value)> Properties { get; init; } = [];
         public IEnumerable<string> OtherOptions { get; init; } = [];
@@ -75,6 +75,8 @@ namespace Test_Qt.Bridge.Project
         private const int MaxCapturedStreamChars = 1_000_000;
         private const string CapturedStreamTruncationMessage =
             "... [output truncated by test harness] ...";
+
+        private bool restoreCompleted;
 
         private const string TestRootEnvVar = "QTBRIDGE_TEST_ROOT";
         private const string TestRootDirName = "qtbridge-csharp-tests";
@@ -286,6 +288,7 @@ namespace Test_Qt.Bridge.Project
         {
             if (reset)
                 Reset();
+            restoreCompleted = false;
             if (!string.IsNullOrEmpty(filename))
                 ProjectFilename = filename;
             if (!string.IsNullOrEmpty(extension))
@@ -405,12 +408,14 @@ namespace Test_Qt.Bridge.Project
             options ??= new();
             ExePath = null;
             var args = new List<string>();
-            if (options.Restore)
+            var restore = options.Restore ?? !restoreCompleted;
+            if (restore)
                 args.Add("-restore");
-            if (options.BinaryLog)
+            if (options.BinaryLog ?? AssemblyMetadata.Settings.BinaryLog)
                 args.Add("-bl");
-            if (options.Targets?.Any() == true)
-                args.Add($"-t:{string.Join(";", options.Targets)}");
+            var targets = options.Targets?.ToArray() ?? [];
+            if (targets.Length > 0)
+                args.Add($"-t:{string.Join(";", targets)}");
             args.AddRange(PropertyArgs(options));
             args.AddRange(options.OtherOptions);
 
@@ -422,6 +427,8 @@ namespace Test_Qt.Bridge.Project
             await msbuild.WaitForExitAsync(cancel.Token);
             if (msbuild.ExitCode != 0)
                 return (false, output.ToString());
+            if (restore || targets.Contains("Restore", StringComparer.OrdinalIgnoreCase))
+                restoreCompleted = true;
             if (!string.IsNullOrEmpty(options.TargetPath)) {
                 var targetPath = await GetPropertyAsync(options.TargetPath, options);
                 if (!File.Exists(targetPath))

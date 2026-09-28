@@ -31,7 +31,7 @@ namespace HelloWorld
             temp.Create();
             temp.AddFile("Program.cs", Source);
 
-            var build = await temp.BuildAsync(new() { BinaryLog = false });
+            var build = await temp.BuildAsync();
             temp.SaveLog();
             Assert.IsTrue(build.Ok);
 
@@ -58,6 +58,7 @@ namespace HelloWorld
 
             var build = await temp.BuildAsync(new()
             {
+                BinaryLog = true,
                 Properties = [("QtBuildSystem", buildSystem)]
             });
             temp.SaveLog(buildSystem);
