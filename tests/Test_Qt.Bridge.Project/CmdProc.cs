@@ -21,6 +21,19 @@ namespace Test_Qt.Bridge.Project
             string exePath, string workDir, string[] args, (string Name, string Value)[] envVars,
             Action<string> stdOut = null, Action<string> stdErr = null)
         {
+            var proc = StartRaw(exePath, workDir, args, envVars);
+            stdOut ??= data => Debug.WriteLine(data);
+            stdErr ??= data => Debug.WriteLine(data);
+            proc.OutputDataReceived += (_, ev) => stdOut(ev.Data);
+            proc.ErrorDataReceived += (_, ev) => stdErr(ev.Data);
+            proc.BeginOutputReadLine();
+            proc.BeginErrorReadLine();
+            return proc;
+        }
+
+        internal static Process StartRaw(
+            string exePath, string workDir, string[] args, (string Name, string Value)[] envVars)
+        {
             if (exePath == null)
                 throw new ArgumentNullException(nameof(exePath));
             var isPathLike = Path.IsPathRooted(exePath)
@@ -36,8 +49,6 @@ namespace Test_Qt.Bridge.Project
 
             args ??= [];
             envVars ??= [];
-            stdOut ??= data => Debug.WriteLine(data);
-            stdErr ??= data => Debug.WriteLine(data);
             var proc = new Process
             {
                 StartInfo = new ProcessStartInfo
@@ -55,12 +66,8 @@ namespace Test_Qt.Bridge.Project
             };
             foreach (var envVar in envVars)
                 proc.StartInfo.Environment[envVar.Name] = envVar.Value;
-            proc.OutputDataReceived += (_, ev) => stdOut(ev.Data);
-            proc.ErrorDataReceived += (_, ev) => stdErr(ev.Data);
             if (!proc.Start())
                 throw new InvalidOperationException($"Could not start process: '{exePath}'.");
-            proc.BeginOutputReadLine();
-            proc.BeginErrorReadLine();
             return proc;
         }
     }

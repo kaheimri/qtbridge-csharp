@@ -74,6 +74,7 @@ namespace Test_Qt.Bridge.Project
     public class TempProject : IDisposable
     {
         private const int MaxCapturedStreamChars = 1_000_000;
+        private const int OutputDrainTimeoutMs = 2000;
         private const string CapturedStreamTruncationMessage =
             "... [output truncated by test harness] ...";
 
@@ -475,41 +476,114 @@ namespace Test_Qt.Bridge.Project
             return msbuild.ExitCode != 0 ? null : stdOut.ToString().Trim(' ', '\n', '\r', '\t');
         }
 
-        private static void AppendCapturedLine(StringBuilder output, string data)
+        private static void AppendCapturedText(StringBuilder output, char[] data, int count)
         {
-            if (output == null || data == null)
+            if (output == null || count <= 0)
                 return;
 
-            if (output.Length >= MaxCapturedStreamChars)
-                return;
+            lock (output) {
+                if (output.Length >= MaxCapturedStreamChars)
+                    return;
 
-            var remaining = MaxCapturedStreamChars - output.Length;
-            if (remaining <= 0)
-                return;
+                var remaining = MaxCapturedStreamChars - output.Length;
+                if (remaining <= 0)
+                    return;
 
-            var lineLength = data.Length + Environment.NewLine.Length;
-            if (lineLength <= remaining) {
-                output.AppendLine(data);
-                return;
+                if (count <= remaining) {
+                    output.Append(data, 0, count);
+                    return;
+                }
+
+                var reservedForNotice = Environment.NewLine.Length
+                    + CapturedStreamTruncationMessage.Length;
+                var charsToCopy = Math.Max(0, remaining - reservedForNotice);
+                if (charsToCopy > 0)
+                    output.Append(data, 0, Math.Min(charsToCopy, count));
+                if (output.Length < MaxCapturedStreamChars)
+                    output.AppendLine();
+                if (output.Length < MaxCapturedStreamChars)
+                    output.Append(CapturedStreamTruncationMessage);
             }
-
-            var reservedForNotice = Environment.NewLine.Length + CapturedStreamTruncationMessage.Length;
-            var charsToCopy = Math.Max(0, remaining - reservedForNotice);
-            if (charsToCopy > 0)
-                output.Append(data, 0, Math.Min(charsToCopy, data.Length));
-            if (output.Length < MaxCapturedStreamChars)
-                output.AppendLine();
-            if (output.Length < MaxCapturedStreamChars)
-                output.Append(CapturedStreamTruncationMessage);
         }
 
-        private static Action<string> GetStreamHandler(Redirect stream, StringBuilder stdOut,
+        private static async Task CaptureStreamAsync(StreamReader stream, StringBuilder output,
+            CancellationToken cancellationToken)
+        {
+            var buffer = new char[4096];
+            try {
+                while (true) {
+                    var count = await stream.ReadAsync(buffer, cancellationToken);
+                    if (count == 0)
+                        break;
+                    AppendCapturedText(output, buffer, count);
+                }
+            } catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
+                // A child process inherited the pipe and kept it open after the process under
+                // test exited. Everything written before cancellation has already been captured.
+            } catch (ObjectDisposedException) when (cancellationToken.IsCancellationRequested) {
+                // Closing the reader is the fallback for platforms where cancellation alone does
+                // not interrupt an outstanding pipe read.
+            }
+        }
+
+        private static string CapturedText(StringBuilder output)
+        {
+            lock (output)
+                return output.ToString();
+        }
+
+        private static async Task WaitForProcessExitAsync(
+            Process process, CancellationToken cancellationToken)
+        {
+            if (process.HasExited)
+                return;
+
+            var exited = new TaskCompletionSource(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+            void ProcessExited(object _, EventArgs __) => exited.TrySetResult();
+
+            process.Exited += ProcessExited;
+            try {
+                process.EnableRaisingEvents = true;
+                if (process.HasExited)
+                    return;
+                await exited.Task.WaitAsync(cancellationToken);
+            } finally {
+                process.Exited -= ProcessExited;
+            }
+        }
+
+        private static async Task DrainProcessOutputAsync(Process process,
+            CancellationTokenSource captureCancel, Task captureStdOut, Task captureStdErr)
+        {
+            using var drainTimeout = new CancellationTokenSource(OutputDrainTimeoutMs);
+            var captureOutput = Task.WhenAll(captureStdOut, captureStdErr);
+            try {
+                await captureOutput.WaitAsync(drainTimeout.Token);
+            } catch (OperationCanceledException) when (drainTimeout.IsCancellationRequested) {
+                // The process itself has exited. A concurrently launched process may have
+                // inherited one of its redirected pipe handles, preventing EOF indefinitely.
+                captureCancel.Cancel();
+                process.StandardOutput.Dispose();
+                process.StandardError.Dispose();
+                try {
+                    await captureOutput;
+                } catch (Exception exception) when (
+                    exception is OperationCanceledException
+                        or ObjectDisposedException
+                        or IOException) {
+                    // Expected when an inherited handle prevents normal EOF detection.
+                }
+            }
+        }
+
+        private static StringBuilder GetStreamBuffer(Redirect stream, StringBuilder stdOut,
             StringBuilder stdErr)
         {
             return stream switch
             {
-                Redirect.StdOut => data => AppendCapturedLine(stdOut, data),
-                Redirect.StdErr => data => AppendCapturedLine(stdErr, data),
+                Redirect.StdOut => stdOut,
+                Redirect.StdErr => stdErr,
                 _ => null
             };
         }
@@ -527,19 +601,33 @@ namespace Test_Qt.Bridge.Project
                 throw new InvalidOperationException("Missing executable. Did you forget to build?");
 
             StringBuilder stdOut = new(), stdErr = new();
-            var run = CmdProc.Start(exePath, workDir, args, envVars,
-                GetStreamHandler(options.StdOut, stdOut, stdErr),
-                GetStreamHandler(options.StdErr, stdOut, stdErr));
-            CancellationTokenSource cancel = options.Timeout > 0 ? new(options.Timeout) : new();
+            using var run = CmdProc.StartRaw(exePath, workDir, args, envVars);
+            using var captureCancel = new CancellationTokenSource();
+            var captureStdOut = CaptureStreamAsync(run.StandardOutput,
+                GetStreamBuffer(options.StdOut, stdOut, stdErr), captureCancel.Token);
+            var captureStdErr = CaptureStreamAsync(run.StandardError,
+                GetStreamBuffer(options.StdErr, stdOut, stdErr), captureCancel.Token);
+            using CancellationTokenSource cancel = options.Timeout > 0
+                ? new(options.Timeout)
+                : new();
             try {
-                await run.WaitForExitAsync(cancel.Token);
-            } catch (TaskCanceledException exception) {
+                await WaitForProcessExitAsync(run, cancel.Token);
+            } catch (OperationCanceledException exception) when (cancel.IsCancellationRequested) {
+                // The timeout and process-exit signals can race. If the process won, only its
+                // redirected streams still need attention; it is not a process timeout.
+                if (run.HasExited) {
+                    await DrainProcessOutputAsync(
+                        run, captureCancel, captureStdOut, captureStdErr);
+                    return (run.ExitCode, CapturedText(stdOut), CapturedText(stdErr));
+                }
+
                 try {
-                    if (!run.HasExited)
-                        run.Kill(true);
+                    run.Kill(true);
                 } catch {
                     // Ignore; try making the original timeout details below visible.
                 }
+
+                await DrainProcessOutputAsync(run, captureCancel, captureStdOut, captureStdErr);
 
                 throw new TimeoutException(
                     $"Timed out waiting for process to exit after {options.Timeout} ms."
@@ -549,11 +637,12 @@ namespace Test_Qt.Bridge.Project
                     + $"{Environment.NewLine}EnvVars: {
                         string.Join("; ", envVars.Select(x => $"{x.Name}={x.Value}"))
                     }"
-                    + $"{Environment.NewLine}StdOut:{Environment.NewLine}{stdOut}"
-                    + $"{Environment.NewLine}StdErr:{Environment.NewLine}{stdErr}",
+                    + $"{Environment.NewLine}StdOut:{Environment.NewLine}{CapturedText(stdOut)}"
+                    + $"{Environment.NewLine}StdErr:{Environment.NewLine}{CapturedText(stdErr)}",
                     exception);
             }
-            return (run.ExitCode, stdOut.ToString(), stdErr.ToString());
+            await DrainProcessOutputAsync(run, captureCancel, captureStdOut, captureStdErr);
+            return (run.ExitCode, CapturedText(stdOut), CapturedText(stdErr));
         }
     }
 }
