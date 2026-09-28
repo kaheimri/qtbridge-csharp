@@ -497,6 +497,10 @@ namespace Qt.Qml
     </ItemGroup>
     <PropertyGroup Condition="'$(QtUseMsBuildGenerator)' == 'true'">
       <NativeApp>%(NativeSln.RelativeDir)%(NativeSln.Filename)</NativeApp>
+      <QtNativeBuildProperties
+        >Platform=$(QtCMakeMSBuildPlatform);Configuration=$(QtBuildConfig);CL_MP=true</QtNativeBuildProperties>
+      <QtNativeBuildProperties Condition="'$(QtBuildParallelism)' != ''"
+        >$(QtNativeBuildProperties);CL_MPCount=$(QtBuildParallelism)</QtNativeBuildProperties>
     </PropertyGroup>
     <ItemGroup Condition="'$(QtUseMsBuildGenerator)' == 'true'">
       <NativeProject Include="$(NativeApp)_tooling.vcxproj;
@@ -508,9 +512,14 @@ namespace Qt.Qml
     </ItemGroup>
     <MSBuild Condition="'$(QtUseMsBuildGenerator)' == 'true'"
       Projects="@(NativeProject)" BuildInParallel="false" StopOnFirstFailure="true"
-      Properties="Platform=$(QtCMakeMSBuildPlatform);Configuration=$(QtBuildConfig);CL_MP=true" Targets="Build" />
+      Properties="$(QtNativeBuildProperties)" Targets="Build" />
+    <PropertyGroup Condition="'$(QtUseMsBuildGenerator)' != 'true'">
+      <QtCMakeBuildParallelArgs>--parallel</QtCMakeBuildParallelArgs>
+      <QtCMakeBuildParallelArgs Condition="'$(QtBuildParallelism)' != ''"
+        >--parallel $(QtBuildParallelism)</QtCMakeBuildParallelArgs>
+    </PropertyGroup>
     <Exec Condition="'$(QtUseMsBuildGenerator)' != 'true'"
-      Command="$(QtVcVarsCmd)cmake --build . --parallel"
+      Command="$(QtVcVarsCmd)cmake --build . $(QtCMakeBuildParallelArgs)"
       WorkingDirectory="$(QtNativeBuildDir)" EchoOff="true" IgnoreExitCode="true">
       <Output TaskParameter="ExitCode" PropertyName="CMakeResult" />
     </Exec>

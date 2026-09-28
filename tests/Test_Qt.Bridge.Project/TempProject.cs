@@ -27,6 +27,7 @@ namespace Test_Qt.Bridge.Project
         public string TargetFramework { get; set; }
         public bool ImplicitUsings { get; set; } = true;
         public bool Nullable { get; set; } = false;
+        public int? QtBuildParallelism { get; set; } = 2;
         public List<(string Id, string Version)> PackageReferences { get; set; } = [];
         public string BeforeSdkProps { get; set; } = string.Empty;
         public string AfterSdkProps { get; set; } = string.Empty;
@@ -217,6 +218,9 @@ namespace Test_Qt.Bridge.Project
             lines.Add($"    <ImplicitUsings>{(options.ImplicitUsings ? "enable" : "disable")}"
                 + "</ImplicitUsings>");
             lines.Add($"    <Nullable>{(options.Nullable ? "enable" : "disable")}</Nullable>");
+            if (options.QtBuildParallelism > 0)
+                lines.Add($"    <QtBuildParallelism>{options.QtBuildParallelism}"
+                    + "</QtBuildParallelism>");
             lines.Add("  </PropertyGroup>");
             return string.Join(Environment.NewLine, lines);
         }
