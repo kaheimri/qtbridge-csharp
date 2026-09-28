@@ -10,6 +10,7 @@
   <PropertyGroup>
     <TestBinaryLog>true</TestBinaryLog>
     <TestBuildExamples>true</TestBuildExamples>
+    <TestRunInboundMemoryLeak>true</TestRunInboundMemoryLeak>
   </PropertyGroup>
 
   <Import Project="$(MSBuildThisFileDirectory)..\..\TestSettings.props"
@@ -267,6 +268,10 @@
     <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
       <_Parameter1>Settings.BuildExamples</_Parameter1>
       <_Parameter2>$(TestBuildExamples)</_Parameter2>
+    </AssemblyAttribute>
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>Settings.RunInboundMemoryLeak</_Parameter1>
+      <_Parameter2>$(TestRunInboundMemoryLeak)</_Parameter2>
     </AssemblyAttribute>
   </ItemGroup>
 

@@ -4,7 +4,6 @@
 using System;
 using System.Diagnostics;
 using System.IO;
-using System.Threading;
 
 [assembly: Qt.Generate(Packages = "Test", Libraries = "Qt6::Test")]
 
@@ -12,12 +11,14 @@ namespace Test_InboundMemLeak
 {
     public static class Functions
     {
-        private static Stopwatch SampleTimer { get; } = Stopwatch.StartNew();
-        private static readonly TimeSpan SampleDuration = TimeSpan.FromSeconds(1);
+        private const int TargetSampleCount = 100;
+        private const int WarmupPercent = 10;
         private static List<double> SampleCalls { get; } = new(100);
         private static List<double> SampleBytes { get; } = new(100);
 
         private static int CallCount { get; set; } = 0;
+        private static int WarmupCalls { get; set; } = 0;
+        private static int CallsPerSample { get; set; } = 1;
 
         private static long AllocatedBytes()
         {
@@ -33,18 +34,49 @@ namespace Test_InboundMemLeak
             return double.IsNaN(r) ? 0 : r;
         }
 
+        public static int SampleCount() => SampleCalls.Count;
+
+        public static double RetainedBytes()
+        {
+            if (SampleBytes.Count < 2)
+                return 0;
+
+            // Comparing windows makes this less sensitive to page-sized jumps in the
+            // process working set than comparing the first and last samples directly.
+            int windowSize = Math.Min(10, SampleBytes.Count / 2);
+            double first = SampleBytes.Take(windowSize).Average();
+            double last = SampleBytes.TakeLast(windowSize).Average();
+            return last - first;
+        }
+
+        public static void ConfigureSampling(int totalCalls)
+        {
+            if (totalCalls < 2)
+                throw new ArgumentOutOfRangeException(nameof(totalCalls));
+
+            // Sampling by call count is deterministic and avoids delaying every inbound call
+            // merely to spread measurements over wall-clock time. Ignore initial calls so
+            // runtime/JIT startup growth is not mistaken for retained per-call allocations.
+            CallCount = 0;
+            WarmupCalls = totalCalls * WarmupPercent / 100;
+            CallsPerSample = Math.Max(1,
+                (totalCalls - WarmupCalls) / TargetSampleCount);
+            SampleCalls.Clear();
+            SampleBytes.Clear();
+        }
+
         public static void InboundVoid()
         {
+            CallCount++;
+            if (CallCount <= WarmupCalls
+                || (CallCount - WarmupCalls) % CallsPerSample != 0)
+                return;
+
             Stopwatch delayTimer = Stopwatch.StartNew();
             GC.Collect();
             GC.WaitForPendingFinalizers();
             GC.Collect();
             while (delayTimer.Elapsed.TotalNanoseconds < 400000) ;
-
-            CallCount++;
-            if (SampleTimer.Elapsed < SampleDuration)
-                return;
-            SampleTimer.Restart();
 
             SampleCalls.Add(CallCount);
             SampleBytes.Add(AllocatedBytes());

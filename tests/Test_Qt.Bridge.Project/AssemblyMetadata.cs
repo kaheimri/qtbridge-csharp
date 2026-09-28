@@ -35,6 +35,7 @@ namespace Test_Qt.Bridge.Project
         {
             public static bool BinaryLog { get; private set; } = true;
             public static bool BuildExamples { get; private set; } = true;
+            public static bool RunInboundMemoryLeak { get; private set; } = true;
 
             internal static void Init()
             {
