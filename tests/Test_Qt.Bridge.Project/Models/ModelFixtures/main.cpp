@@ -7,6 +7,7 @@
 
 #include "QtQuickTestSetup.h"
 #include "metadata_loader.h"
+#include "qml_register_types.h"
 
 namespace
 {
@@ -25,10 +26,10 @@ class Setup : public QtQuickTestSetup
 int main(int argc, char **argv)
 {
     QDotNetConvert::setDispatch(QtDotNet::objectDispatch);
-    QtDotNet::loadTypeMetadata(QFileInfo(argv[0]).absoluteDir().path(), {});
+    QtDotNet::loadTypeMetadata(QFileInfo(argv[0]).absoluteDir().path(), qml_register_types);
     QTEST_SET_MAIN_SOURCE_PATH
     Setup setup;
-    return quick_test_main_with_setup(argc, argv, "Test_TreeModel",
+    return quick_test_main_with_setup(argc, argv, "Test_ModelFixtures",
                                       QUICK_TEST_SOURCE_DIR_DOTNET, &setup);
 }
 

@@ -3,28 +3,114 @@
 
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Linq;
-using System.Reflection;
 using Qt.Bridge.Models;
 using Qt.DotNet;
 using Qt.Quick;
 
 [assembly: Qt.Generate(Packages = "QuickTest", Libraries = "Qt6::QuickTest")]
 
-namespace Test_ModelRemoveRanges
+namespace Test_QtQuickTest
 {
-    using System.Linq;
+    [Qt.Export(Options = Qt.ExportAs.SourceCode)]
+    public sealed class TestTable : TableModel<int>
+    {
+        private int rowCount = 2;
+        private int columnCount = 2;
+
+        protected override int Rows => rowCount;
+        protected override int Columns => columnCount;
+
+        protected override int this[int row, int col]
+        {
+            get => col - row;
+            set { }
+        }
+
+        protected override bool CanInsertRows(int row, int count) => row >= 0 && count > 0;
+
+        protected override bool InsertRows(int row, int count)
+        {
+            if (!CanInsertRows(row, count))
+                return false;
+            rowCount = Math.Max(rowCount, row) + count;
+            return true;
+        }
+
+        protected override bool CanInsertColumns(int column, int count)
+            => column >= 0 && count > 0;
+
+        protected override bool InsertColumns(int column, int count)
+        {
+            if (!CanInsertColumns(column, count))
+                return false;
+            columnCount = Math.Max(columnCount, column) + count;
+            return true;
+        }
+    }
+
+    public sealed class FolderNode(string name) : TreeNode<FolderNode>
+    {
+        public string Name { get; } = name;
+    }
+
+    [QmlElement]
+    [Qt.Export(Options = Qt.ExportAs.Metadata)]
+    public sealed class MetadataTree : TreeModel<FolderNode>
+    {
+        public MetadataTree()
+        {
+            var projects = AddRoot(new FolderNode("Projects"));
+            AddChild(projects, new FolderNode("Qt"));
+        }
+    }
+
+    [Qt.Export(Options = Qt.ExportAs.SourceCode)]
+    public sealed class Person(string name, int age)
+    {
+        public string Name { get; } = name;
+        public int Age { get; } = age;
+    }
+
+    [QmlElement]
+    [Qt.Export(Options = Qt.ExportAs.Metadata)]
+    public sealed class CollectionModels : IQmlElement
+    {
+        public int[] Numbers { get; } = [2, 3, 5];
+
+        public List<Person> People { get; } =
+        [
+            new("Ada", 36),
+            new("Grace", 85)
+        ];
+
+        public void QmlClassBegin()
+        { }
+
+        public void QmlComponentComplete(object[] nestedElements)
+        { }
+    }
+
+    [QmlElement]
+    [Qt.Export(Options = Qt.ExportAs.Metadata)]
+    public sealed class PlainElement
+    {
+        public int Value() => 42;
+    }
 
     internal class Program
     {
-        static int Main(string[] args)
+        private static int Main(string[] args)
         {
             Qml.WaitForExit();
             return 0;
         }
     }
+}
 
+namespace Test_ModelRemoveRanges
+{
+    [Qt.Export(Options = Qt.ExportAs.SourceCode)]
     public class RemoveRangeTableModel : TableModel<string>
     {
         private List<List<string>> Items { get; } = Enumerable.Range(0, 10)
@@ -40,8 +126,7 @@ namespace Test_ModelRemoveRanges
 
         public RemoveRangeTableModel()
         {
-            ModelChanged += (_, args) =>
-            {
+            ModelChanged += (_, args) => {
                 if (args.Action == EventAction.BeginRemoveRows) {
                     LastRowRemoveFirst = args.First;
                     LastRowRemoveLast = args.Last;
