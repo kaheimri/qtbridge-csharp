@@ -45,16 +45,17 @@ namespace Test_Qt.Bridge.Project
         public TestContext TestContext { get; set; }
 
         [TestMethod]
-        public async Task Build_PublishesCompleteQmlBuildMetadataArtifacts()
+        public async Task Build_PublishesAndRepairsQmlBuildMetadataArtifacts()
         {
             using var temp = CreateProject();
 
             var (buildOk, buildOutput) = await temp.BuildAsync();
-
             temp.SaveLog();
             Assert.IsTrue(buildOk, buildOutput);
 
             var artifacts = await ResolveArtifactsAsync(temp);
+
+            // Initial build publishes the complete metadata set.
             Assert.IsTrue(File.Exists(artifacts.MetadataPath), artifacts.MetadataPath);
             Assert.IsTrue(File.Exists(artifacts.BuildIniPath), artifacts.BuildIniPath);
             Assert.IsTrue(File.Exists(artifacts.ReadyMarkerPath), artifacts.ReadyMarkerPath);
@@ -96,24 +97,15 @@ namespace Test_Qt.Bridge.Project
             AssertSameFilePath(
                 artifacts.ProjectSourcesQrcPath,
                 qmlls.GetProperty("projectSourcesQrc").GetString()!);
-        }
 
-        [TestMethod]
-        public async Task Build_RecreatesDeletedQmlBuildMetadataArtifacts()
-        {
-            using var temp = CreateProject();
-            var (buildOk, buildOutput) = await temp.BuildAsync();
-            Assert.IsTrue(buildOk, buildOutput);
-
-            var artifacts = await ResolveArtifactsAsync(temp);
+            // An incremental build repairs metadata artifacts deleted by external tools.
             File.Delete(artifacts.BuildIniPath);
             File.Delete(artifacts.ProjectSourcesQrcPath);
             File.Delete(artifacts.ReadyMarkerPath);
 
-            var (secondBuildOk, secondBuildOutput) = await temp.BuildAsync();
-
+            var (repairOk, repairOutput) = await temp.BuildAsync();
             temp.SaveLog("repair");
-            Assert.IsTrue(secondBuildOk, secondBuildOutput);
+            Assert.IsTrue(repairOk, repairOutput);
             Assert.IsTrue(File.Exists(artifacts.BuildIniPath), artifacts.BuildIniPath);
             Assert.IsTrue(File.Exists(artifacts.ProjectSourcesQrcPath),
                 artifacts.ProjectSourcesQrcPath);
