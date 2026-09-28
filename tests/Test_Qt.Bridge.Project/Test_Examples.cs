@@ -29,7 +29,9 @@ namespace Test_Qt.Bridge.Project
             StringBuilder buildMsgs = new();
             Action<string> log = x => buildMsgs.AppendLine(x);
             var msbuild = MsBuild.Start(log, log, examplesDir, [],
-                "-restore", "-p:Configuration=Debug", "-p:Platform=Any CPU", "-m", "-t:Rebuild");
+                "-restore",
+                $"-p:SelectedVersion={AssemblyMetadata.SelectedVersion}",
+                "-p:Configuration=Debug", "-p:Platform=Any CPU", "-m", "-t:Rebuild");
             await msbuild.WaitForExitAsync(TestContext.CancellationTokenSource.Token);
 
             var buildSummary = Regex
