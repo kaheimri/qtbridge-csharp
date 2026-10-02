@@ -75,9 +75,13 @@ namespace Qt.Bridge.CodeGeneration.Extensions
                 .Concat(Rules.SourceGraph?.Root?.Assembly?.QtAttributeData<ExportAttribute>()
                     ?.Where(opt => opt.Property("Global", false)) ?? [])
                 .Where(opt => opt.HasProperty(OptionsPropertyName))
-                .Select(opt => opt.TryProperty(OptionsPropertyName, out Options x) ? x : default)
+                .Select(opt => (Options?)(opt.TryProperty(OptionsPropertyName, out Options x)
+                    ? x : default))
                 .FirstOrDefault();
-            return options == default ? DefaultExportOptions : options;
+            // An explicit Default resets to the built-in choice, not the project fallback.
+            if (options.HasValue)
+                return options.Value == default ? DefaultExportOptions : options.Value;
+            return Rules.SourceGraph?.DefaultExportOptions ?? DefaultExportOptions;
         }
 
         /// <summary>

@@ -198,8 +198,8 @@ namespace Qt
     /// that type.
     /// </item>
     /// <item>
-    /// <see cref="Default"/> resets a type-level export declaration to the built-in Qt Bridge
-    /// default instead of inheriting an assembly-level <see cref="ExportAttribute"/>.
+    /// When <see cref="Default"/> is explicitly set, it selects the built-in source-export default
+    /// instead of using an assembly, global, or project default.
     /// </item>
     /// </list>
     /// </remarks>
@@ -209,9 +209,8 @@ namespace Qt
         /// Use the built-in default export mode
         /// </summary>
         /// <remarks>
-        /// When applied explicitly on a type, this resets export behavior to the built-in default
-        /// chosen by Qt Bridge. It does not inherit an assembly-level <see cref="ExportAttribute"/>
-        /// setting.
+        /// When set explicitly, this resets export behavior to Qt Bridge's built-in source-export
+        /// default. It does not use an applicable assembly, global, or project default.
         /// </remarks>
         public const Options Default = Options.Default;
 
@@ -240,22 +239,27 @@ namespace Qt
     /// equal to <see cref="bool">true</see>, the attribute will apply to all types in all
     /// assemblies brought in as static / load-time dependencies.
     ///
-    /// Precedence is:
+    /// For each type, Qt Bridge uses the first applicable export mode in this order:
     /// <list type="number">
     /// <item>
-    /// If a type has no <see cref="ExportAttribute"/>, it inherits any assembly-level export
-    /// setting.
+    /// An attribute on the type.
     /// </item>
     /// <item>
-    /// If a type explicitly sets <see cref="ExportAs.Metadata"/> or
-    /// <see cref="ExportAs.SourceCode"/>, that type-level choice overrides the assembly-level
-    /// setting.
+    /// An attribute on the type's declaring assembly.
     /// </item>
     /// <item>
-    /// If a type explicitly sets <see cref="ExportAs.Default"/>, it resets to the built-in Qt
-    /// Bridge default rather than inheriting the assembly-level setting.
+    /// An attribute with <see cref="Global"/> set to <see cref="bool">true</see> on the root
+    /// application assembly.
+    /// </item>
+    /// <item>
+    /// The project's configured export default.
+    /// </item>
+    /// <item>
+    /// The built-in source-export default.
     /// </item>
     /// </list>
+    /// An explicit <see cref="ExportAs.Default"/> at any attribute scope stops this lookup and
+    /// selects the built-in source-export default.
     /// </remarks>
     [AttributeUsage(TypeAttributeTarget, AllowMultiple = false)]
     public class ExportAttribute : Attribute

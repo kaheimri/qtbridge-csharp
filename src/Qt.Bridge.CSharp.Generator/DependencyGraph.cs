@@ -31,10 +31,12 @@ namespace Qt.Bridge.CodeGeneration
             MetadataLoadContext loader,
             Assembly source,
             IEnumerable<Type> excludedTypes,
-            ResourcePackaging resourcePackaging = ResourcePackaging.Auto)
+            ResourcePackaging resourcePackaging = ResourcePackaging.Auto,
+            Options? defaultExportOptions = null)
         {
             Rules.SourceGraph = new DependencyGraph(loader) {
-                ResourcePackaging = resourcePackaging
+                ResourcePackaging = resourcePackaging,
+                DefaultExportOptions = defaultExportOptions
             };
             foreach (var excludedType in excludedTypes)
                 Rules.SourceGraph.ExcludedTypes.Add(excludedType);
@@ -46,6 +48,7 @@ namespace Qt.Bridge.CodeGeneration
         private ConcurrentDictionary<Type, ConcurrentSet<Type>> Edges { get; } = new();
         public Type Root { get; private set; }
         public ResourcePackaging ResourcePackaging { get; private set; }
+        public Options? DefaultExportOptions { get; private set; }
 
         public IEnumerable<Type> Connected(Type fromType)
         {

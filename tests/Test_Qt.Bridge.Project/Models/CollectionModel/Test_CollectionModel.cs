@@ -18,8 +18,6 @@ namespace Test_Qt.Bridge.Project.Models.CollectionModel
 
             using var temp = new TempProject();
             var options = CreateQtQuickTestOptions(Path.Combine(rootPath, "main.cpp"));
-            // TODO: Revisit if QtExportAs ever becomes a generator project default rather
-            //       than an assembly-level Global Export attribute injected by the build.
             options.AfterSdkProps = """
                 <PropertyGroup>
                   <QtExportAs>metadata</QtExportAs>

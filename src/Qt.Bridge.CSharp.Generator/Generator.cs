@@ -114,7 +114,7 @@ namespace Qt.Bridge.CodeGeneration
         public enum Options
         {
             Source, Ref, Exclude, Target, Rules, Clean, CleanIgnores, MetadataFileName,
-            ResourcePackaging
+            ResourcePackaging, ExportAs
         }
 
         private static RootCommand Command { get; }
@@ -166,6 +166,12 @@ namespace Qt.Bridge.CodeGeneration
                 Options.ResourcePackaging, new Option<string>(
                     "--resource-packaging", "Resource packaging backend (auto, linked or external)")
                 { Arity = ArgumentArity.ExactlyOne, ArgumentHelpName = "mode" }
+            },
+            {
+                Options.ExportAs, new Option<string>(
+                    "--export-as", "Default type export mode (metadata or source); explicit "
+                    + "attributes take precedence")
+                { Arity = ArgumentArity.ExactlyOne, ArgumentHelpName = "mode" }
             }
         };
 
@@ -208,6 +214,18 @@ namespace Qt.Bridge.CodeGeneration
                     + $"for --resource-packaging. Use 'Auto', 'Linked' or 'External'.");
             }
 
+            ctx.TryGetValue(Options.ExportAs, out string exportAs);
+            var defaultExportOptions = exportAs?.ToLowerInvariant() switch
+            {
+                "metadata" => ExportAs.Metadata,
+                "source" => ExportAs.SourceCode,
+                _ => (Qt.Options?)null
+            };
+            if (exportAs != null && defaultExportOptions == null) {
+                return Error(ctx, ExitCode.GenerationError,
+                    $"Invalid value '{exportAs}' for --export-as. Use 'metadata' or 'source'.");
+            }
+
             ctx.TryGetValue(Options.Ref, out string[] refs);
             var assemblies = DistinctByAssemblyIdentity(
                 Directory.GetFiles(RuntimeEnvironment.GetRuntimeDirectory(), "*.dll")
@@ -225,7 +243,7 @@ namespace Qt.Bridge.CodeGeneration
                 .Where(x => x != null);
 
             await DependencyGraph.CreateAsync(loader, sourceAssembly, excludedTypes,
-                resourcePackaging);
+                resourcePackaging, defaultExportOptions);
             if (Rules.SourceGraph == null)
                 return Error(ctx, ExitCode.GraphBuildError, "Graph build error");
 

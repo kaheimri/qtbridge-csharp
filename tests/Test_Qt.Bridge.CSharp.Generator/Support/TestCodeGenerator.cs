@@ -81,6 +81,7 @@ namespace Test_Qt.Bridge.CSharp.Generator.Support
         /// <param name="referencesWithAliases">Aliased references (extern alias support).</param>
         /// <param name="extraRules">Array of custom none build-in rules to apply.</param>
         /// <param name="resourcePackaging">The resource packaging mode to use.</param>
+        /// <param name="defaultExportOptions">The default export mode to use.</param>
         /// <param name="ct">Cancellation token.</param>
         /// <returns>Generated code and metadata.</returns>
         public static async Task<Result> GenerateAsync(string[] sources,
@@ -88,6 +89,7 @@ namespace Test_Qt.Bridge.CSharp.Generator.Support
             List<(string Alias, string Path)> referencesWithAliases = null,
             Type[] extraRules = null,
             ResourcePackaging resourcePackaging = ResourcePackaging.Auto,
+            Qt.Options? defaultExportOptions = null,
             CancellationToken ct = default)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(sources.ToString(), nameof(sources));
@@ -190,7 +192,7 @@ namespace Test_Qt.Bridge.CSharp.Generator.Support
 
                 // 4. Build dependency graph and run rules
                 await DependencyGraph.CreateAsync(metadataLoadContext, sourceAssembly,
-                    Array.Empty<Type>(), resourcePackaging);
+                    Array.Empty<Type>(), resourcePackaging, defaultExportOptions);
                 var targetDirectory = Path.Combine(Path.GetTempPath(), "qtdotnet_codegen_" + Guid
                     .NewGuid().ToString("N"));
                 Directory.CreateDirectory(targetDirectory);

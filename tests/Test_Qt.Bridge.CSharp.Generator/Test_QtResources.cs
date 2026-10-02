@@ -86,7 +86,6 @@ namespace Test_Qt.Bridge.CSharp.Generator
             """;
 
             const string appSource = """
-            [assembly: Qt.Export(Global = true, Options = Qt.ExportAs.Metadata)]
             [assembly:Qt.Bridge.QtResource(
                 SourcePath = @"C:\app\icons\close.svg",
                 Alias = "assemblies/Shared/icons/close.svg",
@@ -102,6 +101,7 @@ namespace Test_Qt.Bridge.CSharp.Generator
                 () => TestCodeGenerator.GenerateAsync([appSource],
                     sourceRefs: [apiAssembly],
                     referencesWithAliases: [("global", libPath)],
+                    defaultExportOptions: Qt.ExportAs.Metadata,
                     resourcePackaging: packaging,
                     ct: TestContext.CancellationTokenSource.Token));
 

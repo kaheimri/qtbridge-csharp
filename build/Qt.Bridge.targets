@@ -186,28 +186,6 @@ namespace Qt.Qml
 
   <!--
   //////////////////////////////////////////////////////////////////////////////////////////////////
-  // QtBridgeAddGlobals
-  -->
-  <Target Name="QtBridgeAddGlobals" BeforeTargets="CoreCompile"
-    Condition="'$(DesignTimeBuild)' != 'true'">
-    <ItemGroup>
-      <QtGlobalAttribs Condition="'$(QtExportAs)' == 'metadata'"
-        Include="Qt.Export(Global = true, Options = Qt.ExportAs.Metadata)"/>
-      <QtGlobalAttribs Condition="'$(QtExportAs)' == 'source'"
-        Include="Qt.Export(Global = true, Options = Qt.ExportAs.SourceCode)"/>
-    </ItemGroup>
-    <MakeDir Directories="$(IntermediateOutputPath)qt/csharp" />
-    <WriteLinesToFile Overwrite="true" WriteOnlyWhenDifferent="true"
-      File="$(_QtProjectIntermediateDir)/$(QtGlobalsCs)"
-      Lines="@(QtGlobalAttribs->'[assembly: %(Identity)]')" />
-    <ItemGroup>
-      <Compile Include="$(IntermediateOutputPath)$(QtGlobalsCs)" />
-    </ItemGroup>
-  </Target>
-  <!-- END QtBridgeAddGlobals -->
-
-  <!--
-  //////////////////////////////////////////////////////////////////////////////////////////////////
   // QtCheckVisualStudioWorkloads
   -->
   <Target Name="QtCheckVisualStudioWorkloads"
@@ -289,6 +267,8 @@ namespace Qt.Qml
       <QtGenCmd
         >$(QtGenCmd) --target "$(ProjectQtNativeRootDir)"</QtGenCmd>
       <QtGenCmd>$(QtGenCmd) --resource-packaging "$(QtResourcePackaging)"</QtGenCmd>
+      <QtGenCmd Condition="'$(QtExportAs)' != ''"
+        >$(QtGenCmd) --export-as "$(QtExportAs)"</QtGenCmd>
       <QtGenCmd
         >$(QtGenCmd) --metadata-file-name "$(QtBridgeMetadataFileName)"</QtGenCmd>
       <QtGenCmd

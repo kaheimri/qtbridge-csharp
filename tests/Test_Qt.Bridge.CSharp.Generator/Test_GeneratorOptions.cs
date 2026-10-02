@@ -17,6 +17,9 @@ namespace Test_Qt.Bridge.CSharp.Generator
         public TestContext TestContext { get; set; }
 
         [TestMethod]
+        [DataRow("--export-as", "metadata")]
+        [DataRow("--export-as", "MeTaDaTa")]
+        [DataRow("--export-as", "SOURCE")]
         [DataRow("--resource-packaging", "Auto")]
         [DataRow("--resource-packaging", "linked")]
         [DataRow("--resource-packaging", "EXTERNAL")]
@@ -28,6 +31,7 @@ namespace Test_Qt.Bridge.CSharp.Generator
         }
 
         [TestMethod]
+        [DataRow("--export-as", "foo", "Use 'metadata' or 'source'.")]
         [DataRow("--resource-packaging", "bar", "Use 'Auto', 'Linked' or 'External'.")]
         [DataRow("--resource-packaging", "1", "Use 'Auto', 'Linked' or 'External'.")]
         public async Task UnknownValuesNameTheOptionAndTheChoices(
