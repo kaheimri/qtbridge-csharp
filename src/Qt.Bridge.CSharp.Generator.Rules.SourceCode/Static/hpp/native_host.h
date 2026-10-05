@@ -15,4 +15,8 @@ namespace QtDotNet {
 
     const char *nativeHostMetadataName();
     bool nativeHostVerifyMetadata(const QByteArray &metadata);
+
+    const char *nativeHostResourcePackageName();
+    bool nativeHostVerifyResourcePackage(const QByteArray &pack);
+    bool registerNativeHostResourcePackage(const QString &appDirPath);
 }

@@ -5,8 +5,11 @@
 
 #include <QByteArray>
 #include <QCryptographicHash>
+#include <QDebug>
+#include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QResource>
 #include <QString>
 
 #include <vector>
@@ -77,6 +80,10 @@ namespace
     constexpr std::size_t MetadataNameSize = 256;
     constexpr std::size_t MetadataChecksumOffset = 520;
     constexpr std::size_t Sha256ChecksumSize = 32;
+
+    constexpr std::size_t RccNameOffset = 552;
+    constexpr std::size_t RccNameSize = 256;
+    constexpr std::size_t RccChecksumOffset = 808;
 
     constexpr std::size_t ChecksumOffset = 840;
     constexpr std::size_t ManifestPayloadSize = 844;
@@ -277,5 +284,63 @@ namespace QtDotNet
 
         return matches(manifest + MetadataChecksumOffset,
             reinterpret_cast<const unsigned char *>(checksum.constData()), Sha256ChecksumSize);
+    }
+
+    // Returns the resource package file name, or nullptr when no package is shipped.
+    const char *nativeHostResourcePackageName()
+    {
+        const auto *manifest = validManifest();
+        return manifest ? manifestName(manifest, RccNameOffset, RccNameSize) : nullptr;
+    }
+
+    // Checks resource package bytes against the checksum recorded in the manifest.
+    bool nativeHostVerifyResourcePackage(const QByteArray &package)
+    {
+        const auto *manifest = validManifest();
+        if (!manifest)
+            return false;
+
+        const auto checksum = QCryptographicHash::hash(package, QCryptographicHash::Sha256);
+        if (checksum.size() != static_cast<int>(Sha256ChecksumSize))
+            return false;
+
+        return matches(manifest + RccChecksumOffset,
+            reinterpret_cast<const unsigned char *>(checksum.constData()), Sha256ChecksumSize);
+    }
+
+    // Registers the external resource package specified in the build manifest after verifying it
+    // against the stored checksum. The package is read from the application directory using the
+    // name specified in the manifest.
+    bool registerNativeHostResourcePackage(const QString &appDirPath)
+    {
+        if (!nativeHostManifestIsValid()) {
+            qWarning() << "Resource package: application manifest is not valid";
+            return false;
+        }
+
+        // An empty name means the application ships no resource package.
+        const auto *packageName = nativeHostResourcePackageName();
+        if (!packageName)
+            return true;
+
+        const auto packagePath = QDir(appDirPath).filePath(QString::fromUtf8(packageName));
+        QFile packageFile(packagePath);
+        if (!packageFile.open(QIODevice::ReadOnly)) {
+            qWarning() << "Resource package: cannot read" << packagePath;
+            return false;
+        }
+
+        if (!nativeHostVerifyResourcePackage(packageFile.readAll())) {
+            qWarning() << "Resource package: does not match the checksum in the application "
+                "manifest:" << packagePath;
+            return false;
+        }
+        packageFile.close();
+
+        if (!QResource::registerResource(packagePath)) {
+            qWarning() << "Resource package: registration failed:" << packagePath;
+            return false;
+        }
+        return true;
     }
 }

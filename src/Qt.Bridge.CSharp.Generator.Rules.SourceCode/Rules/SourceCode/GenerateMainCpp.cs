@@ -76,6 +76,8 @@ int main(int argc, char *argv[])
         }}
         if (!QtDotNet::loadTypeMetadata(nativeHostAppDirPath, qml_register_types))
             return -4;
+        if (!QtDotNet::registerNativeHostResourcePackage(nativeHostAppDirPath))
+            return -4;
     }}
 
     {mainCpp[new(MainStartingUp) { Sorted = false }]}

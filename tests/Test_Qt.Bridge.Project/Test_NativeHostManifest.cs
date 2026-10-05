@@ -22,6 +22,7 @@ namespace Test_Qt.Bridge.Project
                 ManifestPayloadSize >> 8];
 
         private const string MetadataFileName = "qt_bridge_metadata_dummy_name.json";
+        private const string ResourcePackFileName = "qt_bridge_resources_dummy_name.rcc";
 
         private const string Source = """
              using Qt.Bridge.Models;
@@ -171,6 +172,61 @@ namespace Test_Qt.Bridge.Project
                 Assert.AreEqual(0, executable[manifest + MetadataChecksumOffset + i],
                     $"metadata checksum byte {i} was not cleared");
             }
+        }
+
+        [TestMethod]
+        public async Task StartupRegistersOnlyVerifiedResourcePack()
+        {
+            const string url = "qrc:/assemblies/Manifest/sample.txt";
+            using var temp = new TempProject();
+            temp.Create(new()
+            {
+                Filename = "Manifest",
+                PackageReferences = [Packages.QtBridge],
+                AfterSdkTargets = """
+                    <ItemGroup>
+                      <QtResource Include="sample.txt" />
+                    </ItemGroup>
+                    """
+            });
+            temp.AddFile("sample.txt", "Hello from the resource pack\n");
+            temp.AddFile("Program.cs", Source.Replace("Console.WriteLine(\"started\");",
+                $"Console.WriteLine(\"started\"); "
+                + $"Console.WriteLine($\"resource:{{Qt.Resources.Exists(\"{url}\")}}\");"));
+
+            var build = await temp.BuildAsync(new()
+            {
+                Properties = [("QtBridgeMetadataFileName", MetadataFileName),
+                    ("QtResourcePackaging", "External")]
+            });
+            temp.SaveLog();
+            Assert.IsTrue(build.Ok, build.Output);
+
+            var packPath = Path.Combine(temp.ExeDir, ResourcePackFileName);
+            Assert.IsTrue(File.Exists(packPath),
+                $"the build deployed no resource pack to checksum: {packPath}");
+
+            var executable = await File.ReadAllBytesAsync(temp.ExePath, Token);
+            var manifest = IndexOf(executable, ManifestHeader);
+            Assert.IsGreaterThanOrEqualTo(0, manifest, "no patched manifest header found");
+            Assert.AreEqual((byte)'q', executable[manifest + RccNameOffset],
+                "the host manifest holds no resource pack name");
+
+            var ok = await temp.RunAsync(RunOpts);
+            Assert.AreEqual(0, ok.ExitCode, ok.StdOut);
+            Assert.Contains("resource:True", ok.StdOut);
+
+            var pack = await File.ReadAllBytesAsync(packPath, Token);
+            await File.WriteAllBytesAsync(packPath, [.. pack, (byte)' '], Token);
+            var altered = await temp.RunAsync(RunOpts);
+            Assert.AreNotEqual(0, altered.ExitCode, altered.StdOut);
+            Assert.Contains("does not match the checksum", altered.StdOut);
+            Assert.DoesNotContain("started", altered.StdOut);
+
+            File.Delete(packPath);
+            var missing = await temp.RunAsync(RunOpts);
+            Assert.AreNotEqual(0, missing.ExitCode, missing.StdOut);
+            Assert.Contains("cannot read", missing.StdOut);
         }
 
         private static int IndexOf(byte[] source, byte[] pattern)
