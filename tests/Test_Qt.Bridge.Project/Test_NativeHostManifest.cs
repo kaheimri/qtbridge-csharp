@@ -181,7 +181,6 @@ namespace Test_Qt.Bridge.Project
             using var temp = new TempProject();
             temp.Create(new()
             {
-                Filename = "Manifest",
                 PackageReferences = [Packages.QtBridge],
                 AfterSdkTargets = """
                     <ItemGroup>
@@ -196,7 +195,9 @@ namespace Test_Qt.Bridge.Project
 
             var build = await temp.BuildAsync(new()
             {
-                Properties = [("QtBridgeMetadataFileName", MetadataFileName),
+                Properties = [("AssemblyName", "Manifest"),
+                    ("QtBridgeMetadataFileName", MetadataFileName),
+                    ("QtBridgeResourcePackFileName", ResourcePackFileName),
                     ("QtResourcePackaging", "External")]
             });
             temp.SaveLog();
