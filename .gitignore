@@ -19,6 +19,9 @@ include/*
 # Build logs
 *.binlog
 
+# Local integration-test settings
+/TestSettings.props
+
 # Local nuget
 nuget/local/
 nuget/Qt.Bridge.CSharp.Package/README.md

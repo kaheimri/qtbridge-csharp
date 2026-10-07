@@ -31,6 +31,27 @@ namespace Test_Qt.Bridge.Project
             }
         }
 
+        public static class Settings
+        {
+            public static bool BuildExamples { get; private set; } = true;
+
+            internal static void Init()
+            {
+                var attributes = Assembly.GetExecutingAssembly()
+                    .GetCustomAttributes<AssemblyMetadataAttribute>()
+                    .ToDictionary(a => a.Key, a => a.Value);
+                var settings = typeof(Settings)
+                    .GetProperties(BindingFlags.Static | BindingFlags.Public);
+
+                foreach (var setting in settings) {
+                    if (!attributes.TryGetValue($"{nameof(Settings)}.{setting.Name}", out var s))
+                        continue;
+                    if (bool.TryParse(s, out var enabled))
+                        setting.SetValue(null, enabled);
+                }
+            }
+        }
+
         [ModuleInitializer]
         internal static void Init()
         {
@@ -39,6 +60,7 @@ namespace Test_Qt.Bridge.Project
                 .FirstOrDefault(m => m.Key == "SelectedVersion")
                 ?.Value;
             Build.Init();
+            Settings.Init();
         }
     }
 }

@@ -8,6 +8,13 @@
   <Import Project="$([MSBuild]::GetPathOfFileAbove(qt_version.props))" />
 
   <PropertyGroup>
+    <TestBuildExamples>true</TestBuildExamples>
+  </PropertyGroup>
+
+  <Import Project="$(MSBuildThisFileDirectory)..\..\TestSettings.props"
+    Condition="Exists('$(MSBuildThisFileDirectory)..\..\TestSettings.props')" />
+
+  <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <LangVersion>latest</LangVersion>
     <ImplicitUsings>disable</ImplicitUsings>
@@ -251,6 +258,10 @@
     <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
       <_Parameter1>Build.Platform</_Parameter1>
       <_Parameter2>$(Platform)</_Parameter2>
+    </AssemblyAttribute>
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>Settings.BuildExamples</_Parameter1>
+      <_Parameter2>$(TestBuildExamples)</_Parameter2>
     </AssemblyAttribute>
   </ItemGroup>
 
